@@ -411,6 +411,13 @@ A.toggle_whitespace = {
     end,
 }
 
+A.toggle_full_file = {
+    desc = "Toggle full file / changed parts only",
+    fn = function(s)
+        view().set_full_file(s, not s.full_file)
+    end,
+}
+
 A.goto_file = {
     desc = "Open the file itself",
     fn = function(s, ctx)

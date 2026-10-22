@@ -59,10 +59,23 @@ test("what each side shows: untracked, deleted, staged, staged new file", functi
     end
     eq(show("working", "u.txt"), { "nvim-diff://UNTRACKED/u.txt", repo.root .. "/u.txt" })
     eq(show("working", "del.txt"), { "nvim-diff://INDEX/del.txt", "nvim-diff://DELETED/del.txt" })
-    eq(show("staged", "mod.txt"), { "nvim-diff://HEAD/mod.txt", "nvim-diff://INDEX/mod.txt" })
+    -- Fully staged: index == disk, so the right side is the real, editable file
+    eq(show("staged", "mod.txt"), { "nvim-diff://HEAD/mod.txt", repo.root .. "/mod.txt" })
     eq(vim.api.nvim_buf_get_lines(vim.api.nvim_win_get_buf(s.wins[1]), 0, -1, false), { "1" })
     eq(vim.api.nvim_buf_get_lines(vim.api.nvim_win_get_buf(s.wins[2]), 0, -1, false), { "2" })
-    eq(show("staged", "added.txt"), { "nvim-diff://NEW FILE/added.txt", "nvim-diff://INDEX/added.txt" })
+    eq(vim.bo[vim.api.nvim_win_get_buf(s.wins[2])].modifiable, true)
+    eq(show("staged", "added.txt"), { "nvim-diff://NEW FILE/added.txt", repo.root .. "/added.txt" })
+end)
+
+test("staged file with unstaged edits on top: the right side is the index", function()
+    local repo = H.repo({ ["a.txt"] = "1\n" })
+    repo:write("a.txt", "2\n")
+    repo:git("add", "a.txt")
+    repo:write("a.txt", "3\n")
+    local s = H.open(repo)
+    require("nvim-diff.view").select(s.status.staged[1])
+    eq(H.diff_names(s), { "nvim-diff://HEAD/a.txt", "nvim-diff://INDEX/a.txt" })
+    eq(vim.api.nvim_buf_get_lines(vim.api.nvim_win_get_buf(s.wins[2]), 0, -1, false), { "2" })
 end)
 
 test("staging from the panel moves the file and the diff follows it", function()
@@ -299,4 +312,30 @@ test(":NvimDiff on another repo replaces the view", function()
     ok(s1 ~= s2)
     eq(s2.root, two.root)
     eq(#vim.api.nvim_list_tabpages(), 2)
+end)
+
+test("full file by default; zF folds the unchanged lines, and back", function()
+    local lines = {}
+    for i = 1, 40 do
+        lines[i] = "line " .. i
+    end
+    local repo = H.repo({ ["long.txt"] = table.concat(lines, "\n") .. "\n" })
+    lines[20] = "changed"
+    repo:write("long.txt", table.concat(lines, "\n") .. "\n")
+    local s = H.open(repo)
+    local function folded_line1()
+        return vim.api.nvim_win_call(s.wins[2], function()
+            return vim.fn.foldclosed(1)
+        end)
+    end
+    eq(vim.wo[s.wins[2]].foldenable, false)
+    eq(folded_line1(), -1, "line 1 visible")
+    H.run("toggle_full_file")
+    eq(s.full_file, false)
+    eq(folded_line1(), 1, "unchanged lines folded")
+    ok(vim.wo[s.panel_win].winbar:find("Folded", 1, true))
+    H.run("next_file") -- the setting sticks across files
+    eq(vim.wo[s.wins[2]].foldenable, true)
+    H.run("toggle_full_file")
+    eq(folded_line1(), -1)
 end)

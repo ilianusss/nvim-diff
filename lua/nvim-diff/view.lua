@@ -27,6 +27,7 @@ local M = {}
 ---@field listing_style "tree"|"list"
 ---@field flatten_dirs boolean
 ---@field ignore_ws boolean
+---@field full_file boolean whole files, or only the changed parts (folds)
 ---@field quit_on_close boolean
 ---@field scratch table<string, integer> scratch buffer name -> bufnr
 ---@field scratch_spec table<integer, string> scratch bufnr -> blob spec it shows
@@ -352,6 +353,14 @@ function M.set_ignore_whitespace(s, ignore)
     panel.render(s)
 end
 
+---@param s NvimDiffSession
+---@param full boolean
+function M.set_full_file(s, full)
+    s.full_file = full
+    diff.apply_folds(s)
+    panel.render(s)
+end
+
 --------------------------------------------------------------------------------
 -- Open / close
 --------------------------------------------------------------------------------
@@ -499,6 +508,7 @@ function M.open(opts)
         listing_style = o.panel.listing_style,
         flatten_dirs = o.panel.flatten_dirs,
         ignore_ws = o.ignore_trim_whitespace,
+        full_file = o.full_file,
         quit_on_close = opts.quit_on_close or false,
         scratch = {},
         scratch_spec = {},

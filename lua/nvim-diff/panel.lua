@@ -286,6 +286,7 @@ local CLICK = {
     [1] = "toggle_whitespace",
     [2] = "listing_style",
     [3] = "refresh",
+    [4] = "toggle_full_file",
 }
 
 ---Click handler of the options bar (called by Neovim with the item id as `minwid`).
@@ -303,11 +304,14 @@ end
 ---@param s NvimDiffSession
 ---@return string
 function M.options_bar(s)
-    local ws = s.ignore_ws and click_item(1, " Whitespace: ignored ", "NvimDiffOptionActive")
-        or click_item(1, " Whitespace: shown ", "NvimDiffOption")
+    -- Keep it under the panel width (35)
+    local ws = s.ignore_ws and click_item(1, " WS ignored ", "NvimDiffOptionActive")
+        or click_item(1, " WS shown ", "NvimDiffOption")
     local listing = click_item(2, s.listing_style == "tree" and " Tree " or " List ", "NvimDiffOption")
+    local folds = s.full_file and click_item(4, " Full ", "NvimDiffOption")
+        or click_item(4, " Folded ", "NvimDiffOptionActive")
     local live = click_item(3, "\u{25cf} ", s.watcher and "NvimDiffLive" or "NvimDiffLiveOff")
-    return " " .. ws .. " " .. listing .. "%=" .. live
+    return " " .. ws .. " " .. listing .. " " .. folds .. "%=" .. live
 end
 
 return M

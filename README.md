@@ -6,8 +6,9 @@ what a coding agent just wrote: the view refreshes by itself while the agent wor
 
 - Stage / unstage a file, a folder or everything; restore (discard) with a confirmation
 - Side-by-side diff on Neovim's diff mode: `]c` `[c` `do` `dp` work, the right side is the real
-  file, so you can fix things in place
+  file (also for fully staged files), so you can fix things in place
 - "Ignore leading/trailing whitespace" toggle (VS Code semantics), on by default
+- Whole files by default, or only the changed parts (folded unchanged lines)
 - Live refresh, clickable options bar, 3-way conflict tool (OURS ∣ file ∣ THEIRS)
 - `nvim diff` from anywhere in a repo opens the view; closing it quits Neovim
 
@@ -43,6 +44,7 @@ or `:NvimDiff` (new tab), `:NvimDiffClose`, `:NvimDiffRefresh`.
 | panel       | `R` | refresh |
 | panel, diff | `<Tab>` `<S-Tab>` `[F` `]F` | next / previous / first / last file |
 | panel, diff | `W` | toggle "ignore leading/trailing whitespace" |
+| panel, diff | `zF` | toggle full file / only the changed parts (folds) |
 | panel, diff | `gf` | open the file itself |
 | panel, diff | `<leader>e` / `<leader>b` | focus / toggle the panel |
 | panel, diff | `g?` / `q` | help / close |
@@ -59,6 +61,7 @@ To resolve a conflict: pick versions, `:w`, then `-` to stage the file.
 ```lua
 require("nvim-diff").setup({
     ignore_trim_whitespace = true, -- start with whitespace-only changes hidden (W toggles)
+    full_file = true, -- whole files; false folds unchanged lines like plain diff mode (zF toggles)
     panel = { width = 35, listing_style = "tree", flatten_dirs = true },
     live_refresh = { enabled = true, debounce_ms = 150, poll_ms = 2000 }, -- poll_ms: Linux only
     use_icons = true,

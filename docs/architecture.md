@@ -47,6 +47,10 @@ A file that is both staged and modified appears twice, once in `staged` and once
 | staged: renamed/copied    | `HEAD:old_path`     | index `:path`              |
 | conflicting (3 panes)     | OURS `:2:path`  ∣  working-tree file (real, with markers)  ∣  THEIRS `:3:path` |
 
+- Staged entries: "index" on the right means the real working-tree file when the path has no
+  unstaged changes (same content, and editable); only with unstaged edits on top is it the
+  read-only `:path` blob. The choice is made when the entry is selected, and the winbar says
+  which one (`WORKING TREE` or `INDEX`).
 - No HEAD yet (fresh repo): the left side of staged entries is empty.
 - Binary files and submodules get a one-line placeholder on both sides.
 - A missing conflict stage (modify/delete conflicts) is an empty pane.

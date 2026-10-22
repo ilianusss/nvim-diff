@@ -7,6 +7,8 @@ local M = {}
 M.defaults = {
     -- Start with leading/trailing whitespace changes ignored (VS Code's default); `W` toggles.
     ignore_trim_whitespace = true,
+    -- Show whole files. false: fold the unchanged lines, like plain diff mode; `zF` toggles.
+    full_file = true,
     panel = {
         width = 35,
         listing_style = "tree", -- "tree" | "list"
@@ -51,6 +53,7 @@ M.defaults = {
             ["[F"] = "first_file",
             ["]F"] = "last_file",
             ["W"] = "toggle_whitespace",
+            ["zF"] = "toggle_full_file",
             ["gf"] = "goto_file",
             ["<leader>e"] = "focus_panel",
             ["<leader>b"] = "toggle_panel",
@@ -65,6 +68,7 @@ M.defaults = {
             ["]F"] = "last_file",
             ["-"] = "toggle_stage",
             ["W"] = "toggle_whitespace",
+            ["zF"] = "toggle_full_file",
             ["gf"] = "goto_file",
             ["<leader>e"] = "focus_panel",
             ["<leader>b"] = "toggle_panel",

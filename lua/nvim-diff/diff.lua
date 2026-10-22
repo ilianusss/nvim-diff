@@ -24,11 +24,13 @@ local function empty(path, label)
     return { type = "empty", path = path, label = label }
 end
 
----Sides of an entry, left to right.
+---Sides of an entry, left to right. A staged file without unstaged changes has the same content
+---in the index and on disk: its right side is then the real (editable) file.
 ---@param entry NvimDiffEntry
 ---@param has_head boolean
+---@param unstaged? table<string, boolean> paths with unstaged changes
 ---@return NvimDiffSide[]
-function M.sides(entry, has_head)
+function M.sides(entry, has_head, unstaged)
     local p, old = entry.path, entry.old_path or entry.path
     if entry.binary or entry.submodule then
         local text = entry.submodule and "Submodule: not shown" or "Binary file: not shown"
@@ -47,12 +49,14 @@ function M.sides(entry, has_head)
         end
         return { rev(":" .. old, old, "INDEX"), file(p, "WORKING TREE") }
     end
-    if entry.status == "A" or not has_head then
-        return { empty(p, "NEW FILE"), rev(":" .. p, p, "INDEX") }
-    elseif entry.status == "D" then
+    if entry.status == "D" and has_head then
         return { rev("HEAD:" .. p, p, "HEAD"), empty(p, "DELETED") }
     end
-    return { rev("HEAD:" .. old, old, "HEAD"), rev(":" .. p, p, "INDEX") }
+    local right = (unstaged or {})[p] and rev(":" .. p, p, "INDEX") or file(p, "WORKING TREE")
+    if entry.status == "A" or not has_head then
+        return { empty(p, "NEW FILE"), right }
+    end
+    return { rev("HEAD:" .. old, old, "HEAD"), right }
 end
 
 local function looks_binary(path)
@@ -164,7 +168,11 @@ end
 ---@param entry NvimDiffEntry
 ---@return integer[] bufs one per window
 function M.show(s, entry)
-    local sides = M.sides(entry, s.has_head)
+    local unstaged = {}
+    for _, e in ipairs(s.status.working) do
+        unstaged[e.path] = true
+    end
+    local sides = M.sides(entry, s.has_head, unstaged)
     local bufs = {}
     for i, side in ipairs(sides) do
         bufs[i] = M.side_buf(s, side)
@@ -184,10 +192,21 @@ function M.show(s, entry)
             vim.cmd("diffthis")
         end)
     end
+    M.apply_folds(s)
     s.sides = sides
     M.equalize(s)
     M.jump_first_change(s)
     return bufs
+end
+
+---Full file (folds off) or only the changed parts (diff mode's folds of unchanged lines).
+---@param s NvimDiffSession
+function M.apply_folds(s)
+    for _, w in ipairs(s.wins) do
+        if vim.api.nvim_win_is_valid(w) then
+            vim.wo[w].foldenable = not s.full_file
+        end
+    end
 end
 
 ---Equal widths for the diff windows; the panel keeps its width (winfixwidth).

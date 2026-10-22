@@ -63,8 +63,9 @@ git status letter (M A D R C T U, `?` for untracked) and `added, deleted` line
 counts. Folders show their status when folded.
 
 The options bar on top of the panel (winbar) can be clicked:
-  `Whitespace: ignored|shown`   same as `W`
+  `WS ignored|WS shown`         same as `W` (|nvim-diff-whitespace|)
   `Tree|List`                   same as `i`
+  `Full|Folded`                 same as `zF`
   `●`                           live refresh on (green); click to refresh
 
 What each diff side shows:
@@ -80,7 +81,10 @@ What each diff side shows:
   Conflict                   OURS | working-tree file | THEIRS
 
 The working-tree side is the real file buffer: edit it, write it, LSP works.
-Other sides are read-only `nvim-diff://` buffers. The windows are in Neovim's
+A staged file with no unstaged edits on top has the same content in the index
+and on disk, so its right side is the real file too (editing it creates
+unstaged changes). With unstaged edits on top, the right side is a read-only
+copy of the index. Other sides are read-only `nvim-diff://` buffers. The windows are in Neovim's
 diff mode, so |]c|, |[c|, |do|, |dp| and 'diffopt' work as usual.
 
 ==============================================================================
@@ -109,6 +113,9 @@ File panel ~
   <Tab>  <S-Tab>        Next / previous file
   [F  ]F                First / last file
   W                     Toggle ignoring leading/trailing whitespace
+  zF                    Toggle full file / only the changed parts: with
+                        "Folded", unchanged lines are folded as in plain
+                        diff mode (|zo| |zR| work as usual)
   gf                    Open the file itself (in the previous tab, or a new
                         tab after `nvim diff`)
   <leader>e  <leader>b  Focus / toggle the panel
@@ -116,7 +123,7 @@ File panel ~
   q                     Close
 
 Diff panes ~
-  <Tab>  <S-Tab>  [F  ]F  W  gf  <leader>e  <leader>b  g?  q
+  <Tab>  <S-Tab>  [F  ]F  W  zF  gf  <leader>e  <leader>b  g?  q
                         As in the panel
   -                     Stage / unstage the shown file
 
@@ -178,6 +185,7 @@ Neovim asks if you also have unsaved edits in it). If it leaves its section
 `setup()` is optional. Defaults: >lua
     require("nvim-diff").setup({
         ignore_trim_whitespace = true,
+        full_file = true,            -- false: fold unchanged lines
         panel = {
             width = 35,
             listing_style = "tree",  -- "tree" | "list"
@@ -209,7 +217,7 @@ a key for an existing action: >lua
 Action names: select, click, toggle_stage, stage_all, unstage_all, restore,
 refresh, listing_style, toggle_flatten_dirs, toggle_fold, open_fold,
 close_fold, open_all_folds, close_all_folds, next_file, prev_file,
-first_file, last_file, toggle_whitespace, goto_file, focus_panel,
+first_file, last_file, toggle_whitespace, toggle_full_file, goto_file, focus_panel,
 toggle_panel, help, close, next_conflict, prev_conflict, choose_ours,
 choose_theirs, choose_base, choose_all, choose_none, choose_all_ours,
 choose_all_theirs, choose_all_base, choose_all_all, choose_all_none,
