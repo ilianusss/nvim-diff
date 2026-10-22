@@ -1,0 +1,253 @@
+*nvim-diff.txt*  Review changes like VS Code's Source Control view
+
+==============================================================================
+CONTENTS                                                   *nvim-diff-contents*
+
+  1. Introduction ............................ |nvim-diff-intro|
+  2. Usage ................................... |nvim-diff-usage|
+  3. Layout .................................. |nvim-diff-layout|
+  4. Keymaps ................................. |nvim-diff-keymaps|
+  5. Conflicts ............................... |nvim-diff-conflicts|
+  6. Whitespace .............................. |nvim-diff-whitespace|
+  7. Live refresh ............................ |nvim-diff-live-refresh|
+  8. Configuration ........................... |nvim-diff-config|
+  9. Highlights .............................. |nvim-diff-highlights|
+ 10. Lua API ................................. |nvim-diff-api|
+
+==============================================================================
+1. INTRODUCTION                                               *nvim-diff-intro*
+
+nvim-diff shows the changed files of a git repo in a panel on the left
+(Conflicts / Changes / Staged changes) and a side-by-side diff on the right.
+It is made for reviewing what a coding agent wrote: the view refreshes by
+itself while files change.
+
+Requirements: Neovim 0.11+, git. Optional: nvim-web-devicons or mini.icons
+for file icons.
+
+==============================================================================
+2. USAGE                                                      *nvim-diff-usage*
+
+From a shell, anywhere inside a repo: >sh
+    nvim diff
+<
+This opens the view at the repo root, in the only tab. Closing it (`q` or
+|:NvimDiffClose|) quits Neovim, asking first about unsaved buffers. It only
+applies when `diff` is the only argument and no file named `diff` exists in
+the current directory. The plugin must not be lazy-loaded for this to work.
+
+                                                                  *:NvimDiff*
+:NvimDiff [path]        Open the view for the repo containing [path] (default:
+                        the current directory) in a new tab. If the view is
+                        already open on that repo, go to it. If it is open on
+                        another repo, replace it.
+
+                                                             *:NvimDiffClose*
+:NvimDiffClose          Close the view (quits Neovim after `nvim diff`).
+
+                                                           *:NvimDiffRefresh*
+:NvimDiffRefresh        Re-read the git status now.
+
+==============================================================================
+3. LAYOUT                                                    *nvim-diff-layout*
+
+The panel lists the repo path, then one section per kind of change:
+
+  Conflicts (n)         unmerged files, with the number of conflict regions
+                        left (a check mark once they are resolved)
+  Changes (n)           working tree vs index, including untracked files
+  Staged changes (n)    index vs HEAD
+
+A file both staged and modified shows in both sections. Each file shows its
+git status letter (M A D R C T U, `?` for untracked) and `added, deleted` line
+counts. Folders show their status when folded.
+
+The options bar on top of the panel (winbar) can be clicked:
+  `Whitespace: ignored|shown`   same as `W`
+  `Tree|List`                   same as `i`
+  `●`                           live refresh on (green); click to refresh
+
+What each diff side shows:
+
+  Entry                      Left                Right ~
+  Changes: modified          index               working-tree file
+  Changes: untracked         empty               working-tree file
+  Changes: deleted           index               empty
+  Staged: modified           HEAD                index
+  Staged: added              empty               index
+  Staged: deleted            HEAD                empty
+  Staged: renamed            HEAD (old path)     index (new path)
+  Conflict                   OURS | working-tree file | THEIRS
+
+The working-tree side is the real file buffer: edit it, write it, LSP works.
+Other sides are read-only `nvim-diff://` buffers. The windows are in Neovim's
+diff mode, so |]c|, |[c|, |do|, |dp| and 'diffopt' work as usual.
+
+==============================================================================
+4. KEYMAPS                                                  *nvim-diff-keymaps*
+
+All keymaps are buffer-local and exist only while a buffer is in the view.
+A buffer-local mapping you had on the same key is restored when the buffer
+leaves the view. `g?` shows the keys of the current context.
+
+File panel ~
+  <CR>  o  l  click     Open the diff (on a folder: fold / unfold)
+  -  s                  Stage / unstage the file, folder or section under
+                        the cursor (a section header: the whole section)
+  S                     Stage all changes
+  U                     Unstage all changes
+  X                     Restore: discard the changes of the file, folder or
+                        section. Asks first. In Changes: back to the index
+                        (untracked files are deleted). In Staged changes:
+                        back to HEAD, index and working tree. The discarded
+                        content is saved first: the message shows a
+                        `git cat-file -p <hash>` command to get it back.
+  i                     Toggle tree / list
+  f                     Toggle flattening single-child folders
+  za  zo  zc  h  zR  zM Folds (`h` on a file folds its folder)
+  R                     Refresh
+  <Tab>  <S-Tab>        Next / previous file
+  [F  ]F                First / last file
+  W                     Toggle ignoring leading/trailing whitespace
+  gf                    Open the file itself (in the previous tab, or a new
+                        tab after `nvim diff`)
+  <leader>e  <leader>b  Focus / toggle the panel
+  g?                    Help
+  q                     Close
+
+Diff panes ~
+  <Tab>  <S-Tab>  [F  ]F  W  gf  <leader>e  <leader>b  g?  q
+                        As in the panel
+  -                     Stage / unstage the shown file
+
+Staging asks first when the file has unsaved changes in Neovim (git stages
+the saved version).
+
+==============================================================================
+5. CONFLICTS                                              *nvim-diff-conflicts*
+
+A conflicted file opens in three panes: OURS (`:2:`) | the working file with
+its conflict markers | THEIRS (`:3:`). The cursor starts on the first
+conflict. These keys act on the middle pane (from any of the three):
+
+  ]x  [x                Next / previous conflict
+  <leader>co            Take OURS for the conflict under the cursor
+  <leader>ct            Take THEIRS
+  <leader>cb            Take BASE (needs `merge.conflictStyle = diff3`)
+  <leader>ca            Take all of them
+  dx                    Take none (delete the region)
+  <leader>cO cT cB cA   Same, for every conflict of the file
+  dX                    Delete every conflict region
+  2do  3do              |:diffget| the hunk from OURS / THEIRS
+
+To finish: write the file, then `-` stages it, which marks it resolved and
+moves it to Staged changes. Staging asks first while markers remain.
+Diagnostics are off in the middle pane while it is in the conflict layout.
+
+==============================================================================
+6. WHITESPACE                                            *nvim-diff-whitespace*
+
+With "ignore leading/trailing whitespace" on (the default, `W` toggles),
+lines that only differ by whitespace at their start or end are not marked as
+changed, like VS Code's diff editor. Whitespace inside a line still counts.
+
+This is not 'diffopt' "iwhite", which ignores changes in the amount of
+whitespace but still flags added indentation. nvim-diff sets 'diffexpr' to its
+own function while the view's tab is current, and puts your value back when
+you leave the tab or close the view. "icase", "iwhite", "iwhiteall",
+"iwhiteeol", "iblank", "algorithm:" and "indent-heuristic" from 'diffopt' are
+still honored; "linematch" and "inline:" keep working.
+
+==============================================================================
+7. LIVE REFRESH                                        *nvim-diff-live-refresh*
+
+The panel and the shown diff update by themselves when files or the index
+change:
+- macOS and Windows: recursive file system events on the repo.
+- Linux: `git status` every `live_refresh.poll_ms` while the view is visible.
+- Always: on |FocusGained|, |BufWritePost|, entering the view's tab, and
+  after every action.
+
+When the shown file changes on disk, its buffer is reloaded (|:checktime|;
+Neovim asks if you also have unsaved edits in it). If it leaves its section
+(staged, discarded), the diff follows it, or moves to the nearest file.
+
+==============================================================================
+8. CONFIGURATION                                             *nvim-diff-config*
+
+`setup()` is optional. Defaults: >lua
+    require("nvim-diff").setup({
+        ignore_trim_whitespace = true,
+        panel = {
+            width = 35,
+            listing_style = "tree",  -- "tree" | "list"
+            flatten_dirs = true,
+        },
+        live_refresh = {
+            enabled = true,
+            debounce_ms = 150,
+            poll_ms = 2000,          -- Linux only
+        },
+        use_icons = true,
+        icons = {
+            folder_closed = "", folder_open = "",
+            fold_closed = "", fold_open = "", done = "✓",
+        },
+        keymaps = {
+            panel = { ... },         -- see |nvim-diff-keymaps|
+            view = { ... },
+            conflict = { ... },
+        },
+    })
+<
+Keymaps map a key to an action name. Set a key to `false` to remove it, or add
+a key for an existing action: >lua
+    keymaps = {
+        panel = { ["X"] = false, ["<C-s>"] = "toggle_stage" },
+    }
+<
+Action names: select, click, toggle_stage, stage_all, unstage_all, restore,
+refresh, listing_style, toggle_flatten_dirs, toggle_fold, open_fold,
+close_fold, open_all_folds, close_all_folds, next_file, prev_file,
+first_file, last_file, toggle_whitespace, goto_file, focus_panel,
+toggle_panel, help, close, next_conflict, prev_conflict, choose_ours,
+choose_theirs, choose_base, choose_all, choose_none, choose_all_ours,
+choose_all_theirs, choose_all_base, choose_all_all, choose_all_none,
+diffget_ours, diffget_theirs.
+
+==============================================================================
+9. HIGHLIGHTS                                            *nvim-diff-highlights*
+
+All groups are defined with `default`, so a colorscheme can override them.
+
+  NvimDiffTitle          section titles (bold Label)
+  NvimDiffCounter        counts (bold Identifier)
+  NvimDiffRootPath       repo path
+  NvimDiffFileName       file names              -> Normal
+  NvimDiffSelected       the file shown          -> Type
+  NvimDiffPath           parent paths, hints     -> Comment
+  NvimDiffInsertions     added lines count       -> Added
+  NvimDiffDeletions      deleted lines count     -> Removed
+  NvimDiffConflicts      conflicts left          -> DiagnosticWarn
+  NvimDiffFolderName     -> Directory
+  NvimDiffFolderSign     -> PreProc
+  NvimDiffStatus{Added,Untracked,Modified,Renamed,Copied,TypeChange,
+               Unmerged,Deleted}   status letters -> Added / Changed / Removed
+  NvimDiffOption         options bar items       -> Pmenu
+  NvimDiffOptionActive   an option that hides something -> PmenuSel
+  NvimDiffLive           live refresh dot        -> Added
+  NvimDiffLiveOff        -> Comment
+  NvimDiffWinbarLabel    INDEX / HEAD / ... above the panes -> Title
+  NvimDiffWinbarPath     -> Comment
+
+==============================================================================
+10. LUA API                                                     *nvim-diff-api*
+
+  require("nvim-diff").setup({opts})       see |nvim-diff-config|
+  require("nvim-diff").open({opts})        {path}, {current_tab},
+                                           {quit_on_close}
+  require("nvim-diff").close()
+  require("nvim-diff").refresh()
+  require("nvim-diff").is_open()
+
+ vim:tw=78:ts=8:ft=help:norl:
