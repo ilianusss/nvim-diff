@@ -20,9 +20,9 @@ lazy.nvim. Don't lazy-load it: `nvim diff` needs the startup hook, and the plugi
 modules when you open the view.
 
 ```lua
-{ "ilianusss/nvim-diff", lazy = false, opts = {} }
--- or a local clone:
-{ dir = "~/Desktop/nvim-diff", name = "nvim-diff", lazy = false, opts = {} }
+{ "ilianusss/nvim-diff", version = "*", lazy = false, opts = {} } -- version: latest release
+-- to hack on it, a local clone instead:
+{ dir = "~/path/to/nvim-diff", name = "nvim-diff", lazy = false, opts = {} }
 ```
 
 ## Use
