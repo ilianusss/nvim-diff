@@ -39,7 +39,11 @@ end)
 - `H.open(repo)`: opens the view on that repo and returns the session.
 - `H.wait(cond, ms)`: `vim.wait` with a failure message; use it for anything async (refresh after
   an fs event, `git.status` with a callback).
-- `H.panel_lines(session)` returns the panel text; `H.find_line(session, pattern)` its line number.
+- `H.panel_lines(session)` returns the panel text; `H.find_line(session, pattern)` its line number;
+  `H.panel_cursor(session, pattern)` focuses the panel on that line.
+- `H.run(name)` runs an action as if its key was pressed in the current window.
+- `H.diff_names(session)` buffer names of the diff windows, left to right (`nvim-diff://INDEX/a.txt`,
+  or the absolute path of a real file); `H.changed_lines(win)` the lines diff mode highlights.
 - Diff highlighting: check `vim.fn.diff_hlID(lnum, 1) ~= 0` inside `nvim_win_call(win, ...)`;
   `vim.fn.diff_filler(lnum)` for filler lines.
 

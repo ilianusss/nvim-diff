@@ -58,3 +58,37 @@ test("ignore_trim_whitespace = false starts with whitespace shown", function()
     eq(s.ignore_ws, false)
     eq(H.changed_lines(s.wins[2]), { 2, 3, 4 })
 end)
+
+test("linematch alignment is the same with our 'diffexpr' as with the internal diff", function()
+    local a = { "start", "alpha one", "beta two", "gamma three", "end" }
+    local b = { "start", "inserted line", "alpha one!", "beta two!", "gamma three!", "end" }
+    local function fillers()
+        vim.cmd("tabnew")
+        local ba = vim.api.nvim_create_buf(false, true)
+        local bb = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_lines(ba, 0, -1, false, a)
+        vim.api.nvim_buf_set_lines(bb, 0, -1, false, b)
+        local wa = vim.api.nvim_get_current_win()
+        vim.api.nvim_win_set_buf(wa, ba)
+        vim.cmd("diffthis | vsplit")
+        vim.api.nvim_win_set_buf(0, bb)
+        vim.cmd("diffthis")
+        local out = vim.api.nvim_win_call(wa, function()
+            local r = {}
+            for l = 1, #a do
+                r[l] = vim.fn.diff_filler(l)
+            end
+            return r
+        end)
+        vim.cmd("diffoff! | tabclose")
+        return out
+    end
+    ok(vim.o.diffopt:find("linematch", 1, true), "default 'diffopt' has linematch")
+    vim.o.diffexpr = ""
+    local internal = fillers()
+    vim.o.diffexpr = whitespace.EXPR
+    local ours = fillers()
+    vim.o.diffexpr = ""
+    eq(ours, internal)
+    eq(internal[2], 1, "the inserted line is a filler above 'alpha one', not a changed pair")
+end)

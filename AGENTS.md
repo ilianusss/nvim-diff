@@ -68,6 +68,18 @@ make smoke                # real `nvim diff` startup in a temp repo
 make lint                 # stylua --check (stylua from PATH or Mason)
 ```
 
+## Releasing
+
+Users install with `version = "*"` (lazy.nvim follows the latest semver tag), so a change reaches
+them only with a new tag. After `make check` passes on `main`:
+
+```sh
+git tag -a vX.Y.Z -m "nvim-diff vX.Y.Z" && git push origin vX.Y.Z
+gh release create vX.Y.Z --title vX.Y.Z --generate-notes
+```
+
+Patch for fixes and docs, minor for new features or options, major for breaking keymaps/options.
+
 How to write specs: `.claude/skills/testing/SKILL.md`. Headless gotchas:
 - A headless script that opens windows must always end with `qa!` (wrap the work in `pcall`),
   or Neovim keeps running.

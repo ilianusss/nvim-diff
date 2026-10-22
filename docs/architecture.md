@@ -76,6 +76,12 @@ and `linematch` still work with a 'diffexpr' (tested in `tests/whitespace_spec.l
 'diffexpr' is global: it is set on `TabEnter` of the nvim-diff tab and the previous value is put
 back on `TabLeave` and `close()`.
 
+## Full file / folded
+
+Diff mode folds unchanged lines (`foldmethod=diff`). `full_file = true` (the default) sets
+`foldenable` off in the diff windows after every `diffthis` (`diff.apply_folds()`), so whole files
+show; `zF` flips it for the session. The folds themselves stay Neovim's, so `zo`/`zR` work.
+
 ## Live refresh
 
 - macOS and Windows: one recursive `uv.fs_event` on the repo root, plus a non-recursive one on
