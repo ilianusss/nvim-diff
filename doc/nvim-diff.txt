@@ -87,6 +87,16 @@ unstaged changes). With unstaged edits on top, the right side is a read-only
 copy of the index. Other sides are read-only `nvim-diff://` buffers. The windows are in Neovim's
 diff mode, so |]c|, |[c|, |do|, |dp| and 'diffopt' work as usual.
 
+                                                               *nvim-diff-wrap*
+Long lines wrap ('wrap' and 'linebreak' in the diff windows). Diff mode lines
+up buffer lines, not screen rows, so under a line that wraps to more rows on
+one side the shorter side gets padding rows (`NvimDiffPadding`, drawn with the
+'fillchars' `diff` item like diff filler) and the lines below stay side by
+side. The padding follows edits and window resizes. Scrolling still moves in
+whole lines on both sides: while the top of a window is inside a wrapped line
+or its padding, the other side is off by those rows. `wrap = false` turns it
+all off.
+
 ==============================================================================
 4. KEYMAPS                                                  *nvim-diff-keymaps*
 
@@ -186,6 +196,7 @@ Neovim asks if you also have unsaved edits in it). If it leaves its section
     require("nvim-diff").setup({
         ignore_trim_whitespace = true,
         full_file = true,            -- false: fold unchanged lines
+        wrap = true,                 -- see |nvim-diff-wrap|
         panel = {
             width = 35,
             listing_style = "tree",  -- "tree" | "list"
@@ -247,6 +258,8 @@ All groups are defined with `default`, so a colorscheme can override them.
   NvimDiffLiveOff        -> Comment
   NvimDiffWinbarLabel    INDEX / HEAD / ... above the panes -> Title
   NvimDiffWinbarPath     -> Comment
+  NvimDiffPadding        rows under the shorter side of a wrapped line
+                         (|nvim-diff-wrap|)      -> DiffDelete
 
 ==============================================================================
 10. LUA API                                                     *nvim-diff-api*

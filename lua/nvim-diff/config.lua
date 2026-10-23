@@ -9,6 +9,8 @@ M.defaults = {
     ignore_trim_whitespace = true,
     -- Show whole files. false: fold the unchanged lines, like plain diff mode; `zF` toggles.
     full_file = true,
+    -- Wrap long lines in the diff windows, padding the shorter side so both stay aligned.
+    wrap = true,
     panel = {
         width = 35,
         listing_style = "tree", -- "tree" | "list"

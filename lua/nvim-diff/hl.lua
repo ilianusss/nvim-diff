@@ -39,6 +39,7 @@ local LINKS = {
     NvimDiffLiveOff = "Comment",
     NvimDiffWinbarLabel = "Title", -- "INDEX", "WORKING TREE", ... above the diff panes
     NvimDiffWinbarPath = "Comment",
+    NvimDiffPadding = "DiffDelete", -- rows under the shorter side of a wrapped line, like diff filler
 }
 
 local function fg(name)

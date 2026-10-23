@@ -9,6 +9,7 @@ what a coding agent just wrote: the view refreshes by itself while the agent wor
   file (also for fully staged files), so you can fix things in place
 - "Ignore leading/trailing whitespace" toggle (VS Code semantics), on by default
 - Whole files by default, or only the changed parts (folded unchanged lines)
+- Long lines wrap, with padding under the shorter side so both sides stay aligned (as VS Code does)
 - Live refresh, clickable options bar, 3-way conflict tool (OURS ∣ file ∣ THEIRS)
 - `nvim diff` from anywhere in a repo opens the view; closing it quits Neovim
 
@@ -62,6 +63,7 @@ To resolve a conflict: pick versions, `:w`, then `-` to stage the file.
 require("nvim-diff").setup({
     ignore_trim_whitespace = true, -- start with whitespace-only changes hidden (W toggles)
     full_file = true, -- whole files; false folds unchanged lines like plain diff mode (zF toggles)
+    wrap = true, -- wrap long lines, padding the shorter side to keep both aligned
     panel = { width = 35, listing_style = "tree", flatten_dirs = true },
     live_refresh = { enabled = true, debounce_ms = 150, poll_ms = 2000 }, -- poll_ms: Linux only
     use_icons = true,

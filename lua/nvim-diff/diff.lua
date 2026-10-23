@@ -1,6 +1,8 @@
 -- The diff windows: which content each side shows for an entry (see docs/architecture.md), the
 -- buffers holding it, and putting them in diff mode.
 
+local align = require("nvim-diff.align")
+local config = require("nvim-diff.config")
 local git = require("nvim-diff.git")
 
 local M = {}
@@ -191,6 +193,11 @@ function M.show(s, entry)
             vim.opt_local.fillchars:append({ diff = "\u{2571}" })
             vim.cmd("diffthis")
         end)
+        -- :diffthis turns 'wrap' off
+        if config.options.wrap then
+            vim.wo[w].wrap = true
+            vim.wo[w].linebreak = true
+        end
     end
     M.apply_folds(s)
     s.sides = sides
@@ -209,7 +216,8 @@ function M.apply_folds(s)
     end
 end
 
----Equal widths for the diff windows; the panel keeps its width (winfixwidth).
+---Equal widths for the diff windows; the panel keeps its width (winfixwidth). Wrapped lines
+---take other heights at the new widths, so the padding is redone.
 ---@param s NvimDiffSession
 function M.equalize(s)
     if s.wins[1] and vim.api.nvim_win_is_valid(s.wins[1]) then
@@ -217,6 +225,7 @@ function M.equalize(s)
             vim.cmd("wincmd =")
         end)
     end
+    align.apply(s)
 end
 
 ---Window holding the "new" side: the right one, or LOCAL in the 3-way layout.

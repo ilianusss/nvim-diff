@@ -1,6 +1,7 @@
 -- The review session: one tabpage with the file panel and the diff windows. All mutable state of
 -- the plugin lives in M.session.
 
+local align = require("nvim-diff.align")
 local config = require("nvim-diff.config")
 local diff = require("nvim-diff.diff")
 local git = require("nvim-diff.git")
@@ -358,6 +359,7 @@ end
 function M.set_full_file(s, full)
     s.full_file = full
     diff.apply_folds(s)
+    align.apply(s)
     panel.render(s)
 end
 
@@ -375,6 +377,7 @@ local function teardown(s)
         s.watcher.stop()
     end
     whitespace.apply(false)
+    align.clear()
     for buf in pairs(s.attached) do
         detach(s, buf)
     end
@@ -456,6 +459,21 @@ local function setup_autocmds(s)
         end,
     })
     vim.api.nvim_create_autocmd("ColorScheme", { group = group, callback = hl.setup })
+    -- Wrapped lines change height with the text and the window width. Deferred: computing the
+    -- padding reads the diff, which can update it and fire DiffUpdated again.
+    vim.api.nvim_create_autocmd({ "DiffUpdated", "WinResized" }, {
+        group = group,
+        callback = function()
+            if vim.api.nvim_get_current_tabpage() ~= s.tab then
+                return
+            end
+            vim.schedule(function()
+                if M.session == s then
+                    align.apply(s)
+                end
+            end)
+        end,
+    })
 end
 
 ---@class NvimDiffOpenOpts

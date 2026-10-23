@@ -82,6 +82,30 @@ Diff mode folds unchanged lines (`foldmethod=diff`). `full_file = true` (the def
 `foldenable` off in the diff windows after every `diffthis` (`diff.apply_folds()`), so whole files
 show; `zF` flips it for the session. The folds themselves stay Neovim's, so `zo`/`zR` work.
 
+## Wrapped lines
+
+`:diffthis` turns 'wrap' off; with `wrap = true` (the default) `diff.show()` turns it back on, with
+'linebreak'. Diff mode lines up buffer lines, not screen rows, so `align.lua` pads the shorter side:
+
+1. Each diff window is read as a list of slots, top to bottom: one per diff filler line
+   (`diff_filler()`) and one per buffer line (a closed fold is one slot), with the screen rows it
+   takes (`nvim_win_text_height()`, virtual lines of other plugins included). Diff mode gives every
+   window of a diff the same slots in the same order, so slot k of one window sits next to slot k
+   of the others.
+2. For each slot, the windows with fewer rows than the tallest get virtual lines (`NvimDiffPadding`,
+   the 'fillchars' `diff` character across the text area): below the line, or above it when the
+   slot is filler.
+
+The marks live in the `nvim-diff-align` namespace, scoped with `nvim__ns_set()` to the diff windows,
+so a real file open in another tab shows no padding. Every pass clears the namespace in all buffers
+and redoes it. It runs from `diff.equalize()` (new file, panel shown or hidden), the fold toggle,
+and, deferred, on `DiffUpdated` (edits, refreshes) and `WinResized`. `teardown()` clears it.
+
+Scrollbind still works in whole lines: when the top of a window is inside a wrapped
+line or its padding, the other side is off by those rows until the top reaches a line boundary.
+`zo`/`zc` in folded mode fire no event, so the padding inside a fold opened by hand is only redone
+on the next edit, refresh or resize.
+
 ## Live refresh
 
 - macOS and Windows: one recursive `uv.fs_event` on the repo root, plus a non-recursive one on
