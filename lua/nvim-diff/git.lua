@@ -288,12 +288,16 @@ end
 
 ---@param root string
 ---@param paths string[]
+---@return string? stdout
+---@return string? err
 function M.stage(root, paths)
     return M.run(root, with_paths({ "add", "-A" }, paths))
 end
 
 ---@param root string
 ---@param paths string[] include both sides of a rename
+---@return string? stdout
+---@return string? err
 function M.unstage(root, paths)
     if M.has_head(root) then
         return M.run(root, with_paths({ "restore", "--staged" }, paths))
@@ -302,11 +306,15 @@ function M.unstage(root, paths)
 end
 
 ---@param root string
+---@return string? stdout
+---@return string? err
 function M.stage_all(root)
     return M.run(root, { "add", "-A" })
 end
 
 ---@param root string
+---@return string? stdout
+---@return string? err
 function M.unstage_all(root)
     if M.has_head(root) then
         return M.run(root, { "reset", "-q" })

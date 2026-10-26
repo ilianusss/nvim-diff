@@ -2,8 +2,11 @@
 -- help.lua lists the descs.
 
 local conflict = require("nvim-diff.conflict")
+local diff = require("nvim-diff.diff")
 local git = require("nvim-diff.git")
+local panel = require("nvim-diff.panel")
 local tree = require("nvim-diff.tree")
+local view = require("nvim-diff.view")
 
 local M = {}
 
@@ -20,18 +23,6 @@ local A = {}
 M.actions = A
 
 local ERROR, WARN = vim.log.levels.ERROR, vim.log.levels.WARN
-
-local function view()
-    return require("nvim-diff.view")
-end
-
-local function panel()
-    return require("nvim-diff.panel")
-end
-
-local function diff()
-    return require("nvim-diff.diff")
-end
 
 local function notify(msg, level)
     vim.notify("nvim-diff: " .. msg, level or vim.log.levels.INFO)
@@ -51,7 +42,7 @@ end
 ---@param name string
 ---@param ctx? NvimDiffActionCtx default: computed from the current window
 function M.run(name, ctx)
-    local s = view().session
+    local s = view.session
     local action = A[name]
     if s and action then
         action.fn(s, ctx or context(s))
@@ -109,7 +100,7 @@ end
 --------------------------------------------------------------------------------
 
 local function fold_key(item)
-    return item.section .. ":" .. item.node.path
+    return panel.path_key(item.section, item.node.path)
 end
 
 local function open_item(s, item)
@@ -117,10 +108,10 @@ local function open_item(s, item)
         return
     end
     if item.type == "file" then
-        view().select(item.entry)
+        view.select(item.entry)
     elseif item.type == "dir" then
         s.collapsed[fold_key(item)] = not s.collapsed[fold_key(item)] or nil
-        panel().render(s)
+        panel.render(s)
     end
 end
 
@@ -160,7 +151,7 @@ local function set_fold(s, ctx, collapse)
         if parent == "." or s.listing_style == "list" then
             return
         end
-        key = item.section .. ":" .. parent
+        key = panel.path_key(item.section, parent)
     else
         return
     end
@@ -168,9 +159,9 @@ local function set_fold(s, ctx, collapse)
         collapse = not s.collapsed[key]
     end
     s.collapsed[key] = collapse or nil
-    panel().render(s)
+    panel.render(s)
     if item.type == "file" then
-        local lnum = panel().find(s, "dir:" .. key)
+        local lnum = panel.find(s, "dir:" .. key)
         if lnum then
             vim.api.nvim_win_set_cursor(s.panel_win, { lnum, 0 })
         end
@@ -202,19 +193,19 @@ A.open_all_folds = {
     desc = "Unfold all folders",
     fn = function(s)
         s.collapsed = {}
-        panel().render(s)
+        panel.render(s)
     end,
 }
 
 A.close_all_folds = {
     desc = "Fold all folders",
     fn = function(s)
-        for _, sec in ipairs(panel().SECTIONS) do
-            for _, dir in ipairs(tree.dirs(panel().nodes(s, sec.kind))) do
-                s.collapsed[sec.kind .. ":" .. dir.path] = true
+        for _, sec in ipairs(panel.SECTIONS) do
+            for _, dir in ipairs(tree.dirs(panel.nodes(s, sec.kind))) do
+                s.collapsed[panel.path_key(sec.kind, dir.path)] = true
             end
         end
-        panel().render(s)
+        panel.render(s)
     end,
 }
 
@@ -222,50 +213,49 @@ A.listing_style = {
     desc = "Toggle tree / list",
     fn = function(s)
         s.listing_style = s.listing_style == "tree" and "list" or "tree"
-        panel().render(s)
+        panel.render(s)
     end,
 }
-
 A.toggle_flatten_dirs = {
     desc = "Toggle flattening single-child folders",
     fn = function(s)
         s.flatten_dirs = not s.flatten_dirs
-        panel().render(s)
+        panel.render(s)
     end,
 }
 
 A.refresh = {
     desc = "Refresh",
     fn = function()
-        view().refresh({ sync = true })
+        view.refresh({ sync = true })
     end,
 }
 
 A.next_file = {
     desc = "Next file",
     fn = function(s)
-        view().select_relative(s, 1)
+        view.select_relative(s, 1)
     end,
 }
 
 A.prev_file = {
     desc = "Previous file",
     fn = function(s)
-        view().select_relative(s, -1)
+        view.select_relative(s, -1)
     end,
 }
 
 A.first_file = {
     desc = "First file",
     fn = function(s)
-        view().select_relative(s, "first")
+        view.select_relative(s, "first")
     end,
 }
 
 A.last_file = {
     desc = "Last file",
     fn = function(s)
-        view().select_relative(s, "last")
+        view.select_relative(s, "last")
     end,
 }
 
@@ -312,7 +302,7 @@ A.toggle_stage = {
         if not ok then
             notify(err or "git failed", ERROR)
         end
-        view().refresh({ sync = true })
+        view.refresh({ sync = true })
     end,
 }
 
@@ -323,7 +313,7 @@ A.stage_all = {
         if not ok then
             notify(err or "git failed", ERROR)
         end
-        view().refresh({ sync = true })
+        view.refresh({ sync = true })
     end,
 }
 
@@ -334,7 +324,7 @@ A.unstage_all = {
         if not ok then
             notify(err or "git failed", ERROR)
         end
-        view().refresh({ sync = true })
+        view.refresh({ sync = true })
     end,
 }
 
@@ -387,7 +377,7 @@ A.restore = {
                 end
             end
         end
-        view().refresh({ sync = true })
+        view.refresh({ sync = true })
         -- Buffers of deleted files: drop them unless they are edited or still on screen
         for _, buf in ipairs(gone) do
             if vim.api.nvim_buf_is_valid(buf) and not vim.bo[buf].modified and #vim.fn.win_findbuf(buf) == 0 then
@@ -407,14 +397,14 @@ A.restore = {
 A.toggle_whitespace = {
     desc = "Toggle ignoring leading/trailing whitespace changes",
     fn = function(s)
-        view().set_ignore_whitespace(s, not s.ignore_ws)
+        view.set_ignore_whitespace(s, not s.ignore_ws)
     end,
 }
 
 A.toggle_full_file = {
     desc = "Toggle full file / changed parts only",
     fn = function(s)
-        view().set_full_file(s, not s.full_file)
+        view.set_full_file(s, not s.full_file)
     end,
 }
 
@@ -454,7 +444,7 @@ A.goto_file = {
 A.focus_panel = {
     desc = "Focus the file panel",
     fn = function(s)
-        view().open_panel(s, true)
+        view.open_panel(s, true)
     end,
 }
 
@@ -462,13 +452,13 @@ A.toggle_panel = {
     desc = "Show / hide the file panel",
     fn = function(s)
         if s.panel_win and vim.api.nvim_win_is_valid(s.panel_win) then
-            local main = diff().main_win(s)
+            local main = diff.main_win(s)
             if vim.api.nvim_get_current_win() == s.panel_win and main and vim.api.nvim_win_is_valid(main) then
                 vim.api.nvim_set_current_win(main)
             end
-            view().close_panel(s)
+            view.close_panel(s)
         else
-            view().open_panel(s, false)
+            view.open_panel(s, false)
         end
     end,
 }
@@ -491,7 +481,7 @@ A.help = {
 A.close = {
     desc = "Close the view",
     fn = function()
-        view().close()
+        view.close()
     end,
 }
 
@@ -523,7 +513,7 @@ for which, label in pairs(LABELS) do
                 return
             end
             vim.api.nvim_win_set_cursor(win, { math.min(first, vim.api.nvim_buf_line_count(buf)), 0 })
-            diff().update(s)
+            diff.update(s)
         end,
     }
     A["choose_all_" .. which] = {
@@ -537,7 +527,7 @@ for which, label in pairs(LABELS) do
             if err then
                 notify(err, WARN)
             end
-            diff().update(s)
+            diff.update(s)
         end,
     }
 end

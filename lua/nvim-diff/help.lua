@@ -4,6 +4,8 @@ local config = require("nvim-diff.config")
 
 local M = {}
 
+local ns = vim.api.nvim_create_namespace("nvim-diff-help")
+
 local TITLES = { panel = "File panel", view = "Diff panes", conflict = "Conflicts" }
 
 ---@param scopes string[] keymap scopes, e.g. { "view", "conflict" }
@@ -76,7 +78,7 @@ function M.open(scopes)
     vim.wo[win].cursorline = true
     for i, l in ipairs(lines) do
         if l ~= "" and l:sub(1, 1) ~= " " then
-            vim.api.nvim_buf_set_extmark(buf, vim.api.nvim_create_namespace("nvim-diff-help"), i - 1, 0, {
+            vim.api.nvim_buf_set_extmark(buf, ns, i - 1, 0, {
                 end_col = #l,
                 hl_group = "NvimDiffTitle",
             })

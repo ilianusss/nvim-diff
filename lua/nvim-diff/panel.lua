@@ -22,11 +22,12 @@ M.SECTIONS = {
 ---@field entry? NvimDiffEntry
 ---@field node? NvimDiffNode
 
----@param kind string
+---Key of a file or folder within a section. Panel items and the folded folders (`s.collapsed`) use it.
+---@param section string
 ---@param path string
 ---@return string
-function M.entry_key(kind, path)
-    return kind .. ":" .. path
+function M.path_key(section, path)
+    return section .. ":" .. path
 end
 
 ---@return integer bufnr
@@ -125,10 +126,10 @@ local function render_nodes(s, b, nodes, section, depth)
                 type = "file",
                 section = section,
                 entry = node.entry,
-                key = M.entry_key(section, node.path),
+                key = M.path_key(section, node.path),
             })
         else
-            local fold_key = section .. ":" .. node.path
+            local fold_key = M.path_key(section, node.path)
             local collapsed = s.collapsed[fold_key]
             local segs = {
                 { (collapsed and node.status or " ") .. " ", hl.status[node.status] },
@@ -213,7 +214,7 @@ function M.build(s)
                         type = "file",
                         section = sec.kind,
                         entry = e,
-                        key = M.entry_key(sec.kind, e.path),
+                        key = M.path_key(sec.kind, e.path),
                     })
                 end
             else
@@ -272,7 +273,7 @@ end
 ---@param s NvimDiffSession
 ---@param entry NvimDiffEntry
 function M.focus_entry(s, entry)
-    local lnum = M.find(s, M.entry_key(entry.kind, entry.path))
+    local lnum = M.find(s, M.path_key(entry.kind, entry.path))
     if lnum and s.panel_win and vim.api.nvim_win_is_valid(s.panel_win) then
         vim.api.nvim_win_set_cursor(s.panel_win, { lnum, 0 })
     end

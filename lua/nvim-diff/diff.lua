@@ -7,6 +7,8 @@ local git = require("nvim-diff.git")
 
 local M = {}
 
+local BINARY = "Binary file: not shown"
+
 ---@class NvimDiffSide
 ---@field type "rev"|"file"|"empty"|"placeholder"
 ---@field path string
@@ -35,7 +37,7 @@ end
 function M.sides(entry, has_head, unstaged)
     local p, old = entry.path, entry.old_path or entry.path
     if entry.binary or entry.submodule then
-        local text = entry.submodule and "Submodule: not shown" or "Binary file: not shown"
+        local text = entry.submodule and "Submodule: not shown" or BINARY
         return {
             { type = "placeholder", path = p, label = "OLD", text = text },
             { type = "placeholder", path = p, label = "NEW", text = text },
@@ -101,7 +103,7 @@ end
 local function rev_lines(s, spec)
     local lines, binary = git.show(s.root, spec)
     if binary then
-        return { "Binary file: not shown" }, true
+        return { BINARY }, true
     end
     return lines or {}, false
 end
@@ -117,7 +119,7 @@ function M.side_buf(s, side)
             return scratch(s, { label = "MISSING", path = side.path }, {}, ft)
         end
         if looks_binary(abs) then
-            return scratch(s, { label = side.label, path = side.path }, { "Binary file: not shown" })
+            return scratch(s, { label = side.label, path = side.path }, { BINARY })
         end
         -- bufadd() leaves new buffers unlisted, which keeps reviewed files out of the buffer
         -- list; `gf` (:edit) lists them.

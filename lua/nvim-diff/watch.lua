@@ -4,8 +4,6 @@
 
 local M = {}
 
-local uv = vim.uv or vim.loop
-
 local IGNORED = { "%.git/objects/", "%.git/logs/", "^objects/", "^logs/", "%.lock$" }
 
 local function ignored(fname)
@@ -32,7 +30,7 @@ end
 ---@return NvimDiffWatcher
 function M.start(root, gitdir, opts, on_change)
     local closed = false
-    local debounce = assert(uv.new_timer())
+    local debounce = assert(vim.uv.new_timer())
     local handles = {}
 
     local function fire()
@@ -50,7 +48,7 @@ function M.start(root, gitdir, opts, on_change)
     end
 
     local function watch(path, recursive)
-        local h = uv.new_fs_event()
+        local h = vim.uv.new_fs_event()
         if not h then
             return false
         end
@@ -80,7 +78,7 @@ function M.start(root, gitdir, opts, on_change)
 
     local poll
     if kind == "poll" then
-        poll = assert(uv.new_timer())
+        poll = assert(vim.uv.new_timer())
         poll:start(opts.poll_ms, opts.poll_ms, vim.schedule_wrap(fire))
     end
 
