@@ -106,7 +106,9 @@ end)
 test("closing the review tab by hand removes the padding", function()
     local s, _, buf = real_file_padded()
     vim.cmd("tabclose " .. vim.api.nvim_tabpage_get_number(s.tab))
-    eq(padding_marks(buf), {})
+    H.wait(function()
+        return #padding_marks(buf) == 0
+    end, 1000, "padding removed")
 end)
 
 test("lines added at the end next to a wrapped line keep the sides aligned", function()

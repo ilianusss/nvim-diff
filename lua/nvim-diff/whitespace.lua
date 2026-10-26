@@ -6,7 +6,8 @@ local M = {}
 
 M.EXPR = "v:lua.require'nvim-diff.whitespace'.diffexpr()"
 
-local text_diff = vim.text and vim.text.diff or vim.diff
+-- vim.diff was renamed vim.text.diff in Neovim 0.12; 0.11 only has vim.diff
+local text_diff = vim.text.diff or vim.diff
 
 local saved ---@type string? the user's 'diffexpr' while ours is set
 

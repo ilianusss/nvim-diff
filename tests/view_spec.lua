@@ -207,7 +207,9 @@ test("closing the tab by hand cleans the session up", function()
     repo:write("a.txt", "2\n")
     H.open(repo)
     vim.cmd("tabclose")
-    eq(require("nvim-diff.view").session, nil)
+    H.wait(function()
+        return require("nvim-diff.view").session == nil
+    end, 1000, "session torn down")
     eq(vim.o.diffexpr, "")
 end)
 
@@ -338,4 +340,22 @@ test("full file by default; zF folds the unchanged lines, and back", function()
     eq(vim.wo[s.wins[2]].foldenable, true)
     H.run("toggle_full_file")
     eq(folded_line1(), -1)
+end)
+
+test(":tabclose | NvimDiff reopens the view at once and stops the old watcher", function()
+    local repo = H.repo({ ["a.txt"] = "1\n" })
+    repo:write("a.txt", "2\n")
+    local old = H.open(repo)
+    local stopped = false
+    local stop = old.watcher.stop
+    old.watcher.stop = function()
+        stopped = true
+        stop()
+    end
+    local reopened, err = pcall(vim.cmd, "tabclose | NvimDiff " .. vim.fn.fnameescape(repo.root))
+    ok(reopened, err)
+    local s = require("nvim-diff.view").session
+    ok(s and s ~= old, "a new session")
+    eq(vim.api.nvim_buf_get_name(s.panel_buf), "nvim-diff://panel")
+    ok(stopped, "the old session's watcher is stopped")
 end)
