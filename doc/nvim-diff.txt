@@ -13,6 +13,7 @@ CONTENTS                                                  *nvim-diff-contents*
   8. Configuration ........................... |nvim-diff-config|
   9. Highlights .............................. |nvim-diff-highlights|
  10. Lua API ................................. |nvim-diff-api|
+ 11. Health .................................. |nvim-diff-health|
 
 ==============================================================================
 1. INTRODUCTION                                  *nvim-diff* *nvim-diff-intro*
@@ -22,8 +23,9 @@ nvim-diff shows the changed files of a git repo in a panel on the left
 It is made for reviewing what a coding agent wrote: the view refreshes by
 itself while files change.
 
-Requirements: Neovim 0.11+, git. Optional: nvim-web-devicons or mini.icons
-for file icons.
+Requirements: Neovim 0.11+, git 2.23+. Optional: nvim-web-devicons or
+mini.icons for file icons. |:checkhealth| `nvim-diff` checks them
+(|nvim-diff-health|).
 
 ==============================================================================
 2. USAGE                                                     *nvim-diff-usage*
@@ -274,5 +276,17 @@ All groups are defined with `default`, so a colorscheme can override them.
   require("nvim-diff").close()
   require("nvim-diff").refresh()
   require("nvim-diff").is_open()
+
+==============================================================================
+11. HEALTH                                                  *nvim-diff-health*
+
+`:checkhealth nvim-diff` checks:
+- the Neovim version (0.11+) and the git on $PATH (2.23+, for `git restore`),
+- that every action name in your `keymaps` exists (|nvim-diff-config|),
+- and reports where file icons come from and how live refresh works on this
+  system (|nvim-diff-live-refresh|).
+
+On an older Neovim, |:NvimDiff| and `nvim diff` only show an error saying
+which version is needed.
 
  vim:tw=78:ts=8:ft=help:norl:

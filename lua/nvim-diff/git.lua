@@ -66,6 +66,25 @@ function M.has_head(root)
     return M.run(root, { "rev-parse", "--verify", "-q", "HEAD" }) ~= nil
 end
 
+---Version of the git on $PATH, e.g. "2.45.1" (build suffixes such as ".windows.1" dropped).
+---@return string? version
+---@return string? err
+function M.version()
+    local ok, proc = pcall(vim.system, { "git", "--version" }, { text = true })
+    if not ok then
+        return nil, "git not found: " .. tostring(proc)
+    end
+    local out, err = result(proc:wait())
+    if not out then
+        return nil, "`git --version` failed: " .. err
+    end
+    local version = out:match("^git version (%d+%.%d+%.?%d*)")
+    if not version then
+        return nil, "unexpected `git --version` output: " .. vim.trim(out)
+    end
+    return version
+end
+
 --------------------------------------------------------------------------------
 -- Status
 --------------------------------------------------------------------------------

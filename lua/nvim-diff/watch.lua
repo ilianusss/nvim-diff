@@ -18,6 +18,12 @@ local function ignored(fname)
     return false
 end
 
+---Whether libuv watches directories recursively here (macOS, Windows); elsewhere the watcher polls.
+---@return boolean
+function M.has_recursive_events()
+    return vim.fn.has("mac") == 1 or vim.fn.has("win32") == 1
+end
+
 ---@class NvimDiffWatcher
 ---@field kind "fs_event"|"poll"
 ---@field trigger fun() request a refresh (debounced)
@@ -66,7 +72,7 @@ function M.start(root, gitdir, opts, on_change)
     end
 
     local kind = "poll"
-    if vim.fn.has("mac") == 1 or vim.fn.has("win32") == 1 then
+    if M.has_recursive_events() then
         if watch(root, true) then
             kind = "fs_event"
             -- A linked worktree keeps its git dir outside the root

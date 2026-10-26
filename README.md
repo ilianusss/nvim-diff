@@ -13,7 +13,7 @@ what a coding agent just wrote: the view refreshes by itself while the agent wor
 - Live refresh, clickable options bar, 3-way conflict tool (OURS, file, THEIRS)
 - `nvim diff` from anywhere in a repo opens the view; closing it quits Neovim
 
-Neovim 0.11+ and git. No dependencies (file icons from nvim-web-devicons or mini.icons if installed).
+Neovim 0.11+ and git 2.23+. No dependencies (file icons from nvim-web-devicons or mini.icons if installed).
 
 ## Install
 
@@ -32,7 +32,7 @@ modules when you open the view.
 nvim diff          # in a git repo (any subfolder)
 ```
 
-or `:NvimDiff` (new tab), `:NvimDiffClose`, `:NvimDiffRefresh`.
+or `:NvimDiff` (new tab), `:NvimDiffClose`, `:NvimDiffRefresh`. `:checkhealth nvim-diff` checks the setup.
 
 | Where       | Keys | Action |
 |-------------|------|--------|
@@ -75,7 +75,7 @@ Full docs: `:help nvim-diff`.
 
 ## Contributing
 
-Issues and pull requests are welcome.
+Issues and pull requests are welcome. For a bug, include the output of `:checkhealth nvim-diff`.
 Before opening a pull request, run:
 
 ```sh

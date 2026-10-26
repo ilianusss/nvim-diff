@@ -137,3 +137,7 @@ Staging asks first while conflict markers remain.
 `plugin/nvim-diff.lua` checks at startup whether the only argument is `diff` and no file named
 `diff` exists. On `VimEnter` it wipes the `diff` buffer and opens the view in the current tab
 with `quit_on_close = true`: closing the view runs `confirm qa`.
+
+On a Neovim older than 0.11, the plugin file only defines `:NvimDiff` (and the `nvim diff` hook)
+to print which version is needed: the modules use 0.11 APIs and would fail with Lua errors.
+`:checkhealth nvim-diff` (`health.lua`) checks the Neovim and git versions and the keymaps.
