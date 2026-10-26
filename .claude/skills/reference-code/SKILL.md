@@ -34,4 +34,4 @@ git clone --depth 1 https://github.com/esmuellert/codediff.nvim .reference/coded
 | Live refresh | `watch_index` (index file only) | `ui/refresh/` (controller), `core/watcher/` (external binary + polling) |
 
 Our designs differ on purpose: native diff mode (not codediff's C engine), a Lua 'diffexpr' for
-whitespace, libuv fs events instead of an external watcher. See `docs/architecture.md`.
+whitespace, libuv fs events instead of an external watcher. See `ARCHITECTURE.md`.

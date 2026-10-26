@@ -1,4 +1,4 @@
--- The diff windows: which content each side shows for an entry (see docs/architecture.md), the
+-- The diff windows: which content each side shows for an entry (see ARCHITECTURE.md), the
 -- buffers holding it, and putting them in diff mode.
 
 local align = require("nvim-diff.align")

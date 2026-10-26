@@ -10,7 +10,7 @@ what a coding agent just wrote: the view refreshes by itself while the agent wor
 - "Ignore leading/trailing whitespace" toggle (VS Code semantics), on by default
 - Whole files by default, or only the changed parts (folded unchanged lines)
 - Long lines wrap, with padding under the shorter side so both sides stay aligned (as VS Code does)
-- Live refresh, clickable options bar, 3-way conflict tool (OURS ∣ file ∣ THEIRS)
+- Live refresh, clickable options bar, 3-way conflict tool (OURS, file, THEIRS)
 - `nvim diff` from anywhere in a repo opens the view; closing it quits Neovim
 
 Neovim 0.11+ and git. No dependencies (file icons from nvim-web-devicons or mini.icons if installed).
@@ -39,8 +39,8 @@ or `:NvimDiff` (new tab), `:NvimDiffClose`, `:NvimDiffRefresh`.
 | panel       | `<CR>` `o` `l` click | open the diff (on a folder: fold/unfold) |
 | panel       | `-` `s` | stage / unstage file, folder or section |
 | panel       | `S` / `U` | stage all / unstage all |
-| panel       | `X` | restore (discard) file, folder or section — asks first |
-| panel       | `i` / `f` | tree ↔ list / flatten folders |
+| panel       | `X` | restore (discard) file, folder or section, asks first |
+| panel       | `i` / `f` | tree or list / flatten folders |
 | panel       | `za` `zo` `zc` `h` `zR` `zM` | folds |
 | panel       | `R` | refresh |
 | panel, diff | `<Tab>` `<S-Tab>` `[F` `]F` | next / previous / first / last file |
@@ -65,13 +65,25 @@ require("nvim-diff").setup({
     full_file = true, -- whole files; false folds unchanged lines like plain diff mode (zF toggles)
     wrap = true, -- wrap long lines, padding the shorter side to keep both aligned
     panel = { width = 35, listing_style = "tree", flatten_dirs = true },
-    live_refresh = { enabled = true, debounce_ms = 150, poll_ms = 2000 }, -- poll_ms: Linux only
+    live_refresh = { enabled = true, debounce_ms = 150, poll_ms = 2000 }, -- poll_ms: Linux and other systems without recursive file events
     use_icons = true,
     keymaps = { panel = {}, view = {}, conflict = {} }, -- { ["X"] = false } disables, { ["<C-s>"] = "toggle_stage" } adds
 })
 ```
 
 Full docs: `:help nvim-diff`.
+
+## Contributing
+
+Issues and pull requests are welcome.
+Before opening a pull request, run:
+
+```sh
+make check   # stylua --check, the headless specs and the `nvim diff` smoke test
+```
+
+Conventions are in [AGENTS.md](AGENTS.md) and the design in [ARCHITECTURE.md](ARCHITECTURE.md).
+`main` is protected: changes land through a reviewed pull request, squash-merged.
 
 ## Credits
 
