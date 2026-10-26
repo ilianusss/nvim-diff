@@ -17,6 +17,7 @@ local M = {}
 ---@field conflicts? integer conflict regions left in the working file
 
 ---@class NvimDiffStatus
+---@field has_head boolean false before the first commit
 ---@field conflicting NvimDiffEntry[]
 ---@field working NvimDiffEntry[]
 ---@field staged NvimDiffEntry[]
@@ -81,18 +82,20 @@ local function add_entry(list, kind, status, xy, path, old_path, hashes, sub)
     }
 end
 
----Parses `git status --porcelain=v2 -z --untracked-files=all`.
+---Parses `git status --porcelain=v2 --branch -z --untracked-files=all`.
 ---@param out string
 ---@return NvimDiffStatus
 function M.parse_status(out)
-    local st = { conflicting = {}, working = {}, staged = {} }
+    local st = { has_head = true, conflicting = {}, working = {}, staged = {} }
     local tokens = vim.split(out, "\0", { plain = true })
     local i = 1
     while i <= #tokens do
         local t = tokens[i]
         local kind = t:sub(1, 1)
         local xy, sub, h1, h2, h3, path, old_path
-        if kind == "1" then
+        if t == "# branch.oid (initial)" then
+            st.has_head = false
+        elseif kind == "1" then
             xy, sub, h1, h2, path = t:match("^1 (..) (%S+) %S+ %S+ %S+ (%S+) (%S+) (.*)$")
         elseif kind == "2" then
             xy, sub, h1, h2, path = t:match("^2 (..) (%S+) %S+ %S+ %S+ (%S+) (%S+) %S+ (.*)$")
@@ -164,7 +167,7 @@ function M.count_conflicts(file)
 end
 
 local STATUS_JOBS = {
-    status = { "status", "--porcelain=v2", "-z", "--untracked-files=all" },
+    status = { "status", "--porcelain=v2", "--branch", "--no-ahead-behind", "-z", "--untracked-files=all" },
     working = { "diff", "--numstat", "-z" },
     staged = { "diff", "--cached", "--numstat", "-z" },
 }
