@@ -14,26 +14,28 @@ function M.lines(scopes)
     local actions = require("nvim-diff.actions").actions
     local lines = {}
     for _, scope in ipairs(scopes) do
-        -- Group the keys of each action: "<CR>, l, o  Open the diff"
-        local by_action, order = {}, {}
+        -- Group the keys of each action: "<CR>, l, o  Open the diff". By action, not by name, so
+        -- that a key mapped to an old name shares the row of the new one.
+        local keys_of, order = {}, {}
         for lhs, name in pairs(config.options.keymaps[scope] or {}) do
-            if name and actions[name] then
-                if not by_action[name] then
-                    by_action[name] = {}
-                    order[#order + 1] = name
+            local action = name and actions[name]
+            if action then
+                if not keys_of[action] then
+                    keys_of[action] = {}
+                    order[#order + 1] = action
                 end
-                table.insert(by_action[name], lhs)
+                table.insert(keys_of[action], lhs)
             end
         end
         table.sort(order, function(a, b)
-            return actions[a].desc < actions[b].desc
+            return a.desc < b.desc
         end)
         local rows, width = {}, 0
-        for _, name in ipairs(order) do
-            table.sort(by_action[name])
-            local keys = table.concat(by_action[name], ", ")
+        for _, action in ipairs(order) do
+            table.sort(keys_of[action])
+            local keys = table.concat(keys_of[action], ", ")
             width = math.max(width, vim.fn.strdisplaywidth(keys))
-            rows[#rows + 1] = { keys, actions[name].desc }
+            rows[#rows + 1] = { keys, action.desc }
         end
         if #lines > 0 then
             lines[#lines + 1] = ""

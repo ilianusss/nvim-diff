@@ -209,13 +209,16 @@ A.close_all_folds = {
     end,
 }
 
-A.listing_style = {
+A.toggle_listing_style = {
     desc = "Toggle tree / list",
     fn = function(s)
         s.listing_style = s.listing_style == "tree" and "list" or "tree"
         panel.render(s)
     end,
 }
+-- Old name of toggle_listing_style, kept so that keymaps in existing configs keep working
+A.listing_style = A.toggle_listing_style
+
 A.toggle_flatten_dirs = {
     desc = "Toggle flattening single-child folders",
     fn = function(s)
