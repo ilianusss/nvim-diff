@@ -3,6 +3,7 @@
 
 local align = require("nvim-diff.align")
 local config = require("nvim-diff.config")
+local filter = require("nvim-diff.filter")
 local git = require("nvim-diff.git")
 
 local M = {}
@@ -15,6 +16,8 @@ local BINARY = "Binary file: not shown"
 ---@field label string winbar label
 ---@field spec? string blob spec for "rev": "HEAD:path", ":path", ":2:path"
 ---@field text? string line shown by a "placeholder"
+---@field file? string "rev" shown against this real file: gets the lines its clean filter drops
+---@field filtered? boolean "rev" holds lines the clean filter of `file` drops
 
 local function rev(spec, path, label)
     return { type = "rev", spec = spec, path = path, label = label }
@@ -96,16 +99,45 @@ local function scratch(s, side, lines, filetype)
     if filetype and vim.bo[buf].filetype ~= filetype then
         vim.bo[buf].filetype = filetype
     end
-    s.scratch_spec[buf] = side.spec
+    s.scratch_side[buf] = side.spec and side or nil
     return buf
 end
 
-local function rev_lines(s, spec)
-    local lines, binary = git.show(s.root, spec)
+local function warn(msg)
+    vim.notify("nvim-diff: " .. msg, vim.log.levels.WARN)
+end
+
+---`lines` plus the lines the clean filter of `path` drops from the real file (filter.lua).
+---@return string[] lines
+---@return boolean spliced
+local function with_filtered(s, path, lines)
+    local abs = s.root .. "/" .. path
+    local f = not looks_binary(abs) and io.open(abs, "rb")
+    if not f then
+        return lines, false
+    end
+    local raw = git.split_lines(f:read("*a"))
+    f:close()
+    local clean, err = git.clean(s.root, path)
+    if not clean then
+        if err then
+            warn(("clean filter of %s: %s"):format(path, err))
+        end
+        return lines, false
+    end
+    return filter.splice(lines, clean, raw)
+end
+
+local function rev_lines(s, side)
+    local lines, binary = git.show(s.root, side.spec)
     if binary then
         return { BINARY }, true
     end
-    return lines or {}, false
+    lines = lines or {}
+    if side.file then
+        lines, side.filtered = with_filtered(s, side.file, lines)
+    end
+    return lines, false
 end
 
 ---@param s NvimDiffSession
@@ -130,7 +162,7 @@ function M.side_buf(s, side)
         end
         return buf
     elseif side.type == "rev" then
-        local lines, binary = rev_lines(s, side.spec)
+        local lines, binary = rev_lines(s, side)
         return scratch(s, side, lines, not binary and ft or nil)
     elseif side.type == "placeholder" then
         return scratch(s, side, { side.text })
@@ -164,7 +196,8 @@ end
 
 local function winbar(side)
     local path = side.path:gsub("%%", "%%%%")
-    return ("%%#NvimDiffWinbarLabel# %s %%#NvimDiffWinbarPath#%s"):format(side.label, path)
+    local label = side.filtered and side.label .. " (FILTERED)" or side.label
+    return ("%%#NvimDiffWinbarLabel# %s %%#NvimDiffWinbarPath#%s"):format(label, path)
 end
 
 ---Shows an entry in the diff windows.
@@ -177,6 +210,13 @@ function M.show(s, entry)
         unstaged[e.path] = true
     end
     local sides = M.sides(entry, s.has_head, unstaged)
+    if #sides == 2 and sides[1].type == "rev" and sides[2].type == "file" then
+        local driver, err = git.filter_driver(s.root, sides[2].path)
+        if err then
+            warn(("filter attribute of %s: %s"):format(sides[2].path, err))
+        end
+        sides[1].file = driver and sides[2].path or nil
+    end
     local bufs = {}
     for i, side in ipairs(sides) do
         bufs[i] = M.side_buf(s, side)
@@ -258,17 +298,19 @@ function M.jump_first_change(s)
 end
 
 ---Live refresh of the shown entry: reloads real files from disk and, with `blobs`, scratch sides
----from git, then recomputes the diff. Cursors stay where they are.
+---from git (a side shown against a real file follows that file: always), then recomputes the
+---diff. Cursors stay where they are.
 ---@param s NvimDiffSession
 ---@param blobs boolean
 function M.reload(s, blobs)
     for i, w in ipairs(s.wins) do
         if vim.api.nvim_win_is_valid(w) then
             local buf = vim.api.nvim_win_get_buf(w)
-            local spec = s.scratch_spec[buf]
-            if spec then
-                if blobs then
-                    set_lines(buf, (rev_lines(s, spec)))
+            local side = s.scratch_side[buf]
+            if side then
+                if blobs or side.file then
+                    set_lines(buf, (rev_lines(s, side)))
+                    vim.wo[w].winbar = winbar(side)
                 end
             elseif s.sides and s.sides[i] and s.sides[i].type == "file" and vim.bo[buf].buftype == "" then
                 vim.cmd("checktime " .. buf)

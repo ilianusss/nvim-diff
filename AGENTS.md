@@ -27,6 +27,7 @@ lua/nvim-diff/
   tree.lua              entries -> directory tree (flatten, sort, folder status)
   git.lua               EVERY git call: status parsing, show, stage/unstage/restore
   whitespace.lua        trim-aware 'diffexpr' and its install/restore
+  filter.lua            clean filters: the lines a filter drops, copied onto the git side
   watch.lua             live refresh: fs events / polling / autocmds, debounced
   align.lua             padding under the shorter side of wrapped lines, so both sides stay aligned
   conflict.lua          conflict-marker parser and the choose ours/theirs/base/all/none edits
