@@ -1,0 +1,34 @@
+name: Bug report
+description: Something does not work as documented in `:help nvim-diff`
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: From a fresh `git init` if you can, with the shell commands and the keys you pressed.
+      placeholder: |
+        1. git init repro && cd repro && echo one > a.txt && git add a.txt && git commit -m init
+        2. echo two > a.txt
+        3. nvim diff, then ...
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Your nvim-diff config
+      description: The `setup()` options or lazy.nvim spec, if you changed any default.
+      render: lua
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: macOS 15, Ubuntu 24.04, Windows 11, ...
+    validations:
+      required: true

@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # A new push to a pull request replaces its running checks; every commit on main keeps its run
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: JohnnyMorganz/stylua-action@76fd70c03e6340ceaf673366712db9b20560b402 # v5.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: 2.6.0 # keep the local stylua (Mason or PATH) on this version
+          args: --check lua plugin tests
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        # Linux polls for live refresh, macOS uses recursive file events
+        os: [ubuntu-latest, macos-latest]
+        # The oldest supported Neovim and the latest release
+        nvim: [v0.11.0, stable]
+    runs-on: ${{ matrix.os }}
+    # A headless Neovim that hits a prompt never exits
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The official release tarball. rhysd/action-setup-vim v1.6.1 fails on ubuntu-latest with
+      # EXDEV (rhysd/action-setup-vim#80).
+      - name: Install Neovim
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NVIM_VERSION: ${{ matrix.nvim }}
+        run: |
+          case "$RUNNER_OS-$RUNNER_ARCH" in
+            Linux-X64) asset=nvim-linux-x86_64 ;;
+            macOS-ARM64) asset=nvim-macos-arm64 ;;
+            *) echo "no Neovim build for $RUNNER_OS-$RUNNER_ARCH" >&2; exit 1 ;;
+          esac
+          gh release download "$NVIM_VERSION" -R neovim/neovim -p "$asset.tar.gz" -O - | tar xz -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/$asset/bin" >> "$GITHUB_PATH"
+      - run: nvim --version
+      - run: make test
+      - run: make smoke
