@@ -198,7 +198,9 @@ local function build_status(root, results)
     end
     local st = M.parse_status(out)
     for _, section in ipairs({ "working", "staged" }) do
-        local stats = M.parse_numstat(result(results[section]) or "")
+        local numstat = result(results[section])
+        local stats = M.parse_numstat(numstat or "")
+        local kept = {}
         for _, e in ipairs(st[section]) do
             local s = stats[e.path]
             if s and s.binary then
@@ -206,7 +208,14 @@ local function build_status(root, results)
             elseif s then
                 e.stats = s
             end
+            -- `git status` flags a file whose size changed even when its clean filter (.gitattributes)
+            -- gives back the index content; `git diff` then has nothing to show, and neither do we.
+            local filtered_out = numstat and not s and e.status == "M" and not e.submodule
+            if not filtered_out then
+                kept[#kept + 1] = e
+            end
         end
+        st[section] = kept
     end
     for _, e in ipairs(st.conflicting) do
         e.conflicts = M.count_conflicts(root .. "/" .. e.path)
@@ -297,6 +306,40 @@ function M.show(root, spec)
         return {}, true
     end
     return M.split_lines(out)
+end
+
+---Filter driver .gitattributes gives `path` (`filter=<driver>`), if any.
+---@param root string
+---@param path string
+---@return string? driver
+---@return string? err
+function M.filter_driver(root, path)
+    local out, err = M.run(root, { "check-attr", "-z", "filter", "--", path })
+    if not out then
+        return nil, err
+    end
+    local value = vim.split(out, "\0", { plain = true })[3] -- "<path>\0filter\0<value>\0"
+    if value ~= "unspecified" and value ~= "unset" and value ~= "set" then
+        return value
+    end
+end
+
+---Working-tree content of `path` after its clean filter, as `git add` stores it (the result is
+---written to the object database to be read back). nil when the result is binary.
+---@param root string
+---@param path string
+---@return string[]? lines
+---@return string? err
+function M.clean(root, path)
+    local oid, err = M.run(root, { "hash-object", "-w", "--", path })
+    if not oid then
+        return nil, err
+    end
+    local lines, binary = M.show(root, vim.trim(oid))
+    if binary then
+        return nil
+    end
+    return lines
 end
 
 --------------------------------------------------------------------------------

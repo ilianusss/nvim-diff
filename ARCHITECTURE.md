@@ -18,8 +18,9 @@ It then runs one git call per kind of entry (tracked, staged, untracked), so a p
 the backups and, for staged entries, their index blob.
 
 `view.refresh()` re-renders only when the new `Status` differs from the old one. It keeps the
-panel cursor on the same item, reloads scratch sides whose blob hash changed, runs `:checktime`
-on the real file buffer, then `:diffupdate`.
+panel cursor on the same item, reloads scratch sides whose blob hash changed (a git side that
+carries the lines of a clean filter: every time, see below), runs `:checktime` on the real file
+buffer, then `:diffupdate`.
 
 ## Entry
 
@@ -82,6 +83,33 @@ and `linematch` still work with a 'diffexpr' (tested in `tests/whitespace_spec.l
 
 'diffexpr' is global: it is set on `TabEnter` of the nvim-diff tab and the previous value is put
 back on `TabLeave` and `close()`.
+
+## Clean filters
+
+A path with a `filter=<driver>` attribute is compared by git after its clean filter: `git diff`
+cleans the working-tree file before diffing it. The real file stays the editable right side, so
+the difference is made up on the git side:
+
+- `git.status()` drops a working-tree entry that porcelain status reports as modified (`M`) but
+  `git diff --numstat` does not list. Status flags it from its stat data (the size changed) while
+  the cleaned file equals the index.
+- When `diff.show()` puts a git side against the real file (2 windows), it asks
+  `git.filter_driver()` (`git check-attr`) once. With a driver, the git side's lines go through
+  `filter.splice(blob, clean, raw)`:
+  1. `clean` is the file after its filter: `git hash-object -w` then `cat-file`, so git runs the
+     filter (any driver, `process` ones included). It leaves an unreachable object per written
+     version, which `git gc` prunes.
+  2. Two diffs from `clean` (`vim.text.diff`): to the blob (the real changes, reversed) and to the
+     raw file (the lines the filter removed or rewrote).
+  3. The git side is `clean` with every real-change hunk applied, plus every filter hunk that does
+     not overlap one. Diffed against the raw file, it shows only the real changes. A filter hunk
+     that overlaps a real one is left out, so its lines show as part of that change.
+
+  The winbar adds `(FILTERED)` when lines were added. The side is redone on every refresh (the
+  file can change without the status changing), so a filtered line typed in the buffer is
+  highlighted until the file is written. A file without a filter attribute costs one
+  `git check-attr` when it is selected, and its git side reloads as before.
+- Conflicts are out of it: LOCAL is the file being resolved, OURS and THEIRS are shown as stored.
 
 ## Full file / folded
 

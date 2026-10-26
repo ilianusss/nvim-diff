@@ -8,6 +8,8 @@ what a coding agent just wrote: the view refreshes by itself while the agent wor
 - Side-by-side diff on Neovim's diff mode: `]c` `[c` `do` `dp` work, the right side is the real
   file (also for fully staged files), so you can fix things in place
 - "Ignore leading/trailing whitespace" toggle (VS Code semantics), on by default
+- Follows `.gitattributes` clean filters like `git diff`: lines a filter strips (a local-only
+  settings key, notebook outputs) don't show as changes, and the file stays editable
 - Whole files by default, or only the changed parts (folded unchanged lines)
 - Long lines wrap, with padding under the shorter side so both sides stay aligned (as VS Code does)
 - Live refresh, clickable options bar, 3-way conflict tool (OURS, file, THEIRS)

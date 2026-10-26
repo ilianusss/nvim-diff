@@ -100,6 +100,20 @@ whole lines on both sides: while the top of a window is inside a wrapped line
 or its padding, the other side is off by those rows. `wrap = false` turns it
 all off.
 
+                                                            *nvim-diff-filters*
+Clean filters (`filter=<driver>` in .gitattributes, for example one that strips
+a local-only key from a settings file) are followed like `git diff` does. A
+file whose only differences are removed by its clean filter is not listed.
+When such a file is shown against its real file, the lines the filter removes
+or rewrites are copied onto the git side (index or HEAD) at the same place, so
+they show as unchanged, and its winbar reads `INDEX (FILTERED)` or
+`HEAD (FILTERED)`. The real file stays editable: the git side is recomputed
+when the file is written, so a filtered line you type is highlighted until you
+write it. Where a real change overlaps a filtered line, the filtered line shows
+as part of that change. Git itself runs the filter (`git hash-object -w`, as
+`git add` does), so any driver works; this leaves one unreachable object per
+written version of the file, which `git gc` prunes.
+
 ==============================================================================
 4. KEYMAPS                                                 *nvim-diff-keymaps*
 

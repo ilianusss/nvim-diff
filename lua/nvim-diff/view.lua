@@ -30,7 +30,7 @@ local M = {}
 ---@field full_file boolean whole files, or only the changed parts (folds)
 ---@field quit_on_close boolean
 ---@field scratch table<string, integer> scratch buffer name -> bufnr
----@field scratch_spec table<integer, string> scratch bufnr -> blob spec it shows
+---@field scratch_side table<integer, NvimDiffSide> scratch bufnr -> git side ("rev") it shows
 ---@field attached table<integer, table> bufnr -> { scopes, keys, saved, diagnostics }
 ---@field watcher? NvimDiffWatcher
 ---@field augroup integer
@@ -532,7 +532,7 @@ function M.open(opts)
         full_file = o.full_file,
         quit_on_close = opts.quit_on_close or false,
         scratch = {},
-        scratch_spec = {},
+        scratch_side = {},
         attached = {},
         loaded = {},
         augroup = vim.api.nvim_create_augroup("NvimDiffSession", { clear = true }),
