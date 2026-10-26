@@ -432,12 +432,13 @@ local function setup_autocmds(s)
     vim.api.nvim_create_autocmd("TabClosed", {
         group = group,
         callback = function()
-            if not vim.api.nvim_tabpage_is_valid(s.tab) then
-                teardown(s)
-                vim.schedule(function()
+            -- Neovim 0.11 runs TabClosed while the closed tabpage is still valid: check on the next tick
+            vim.schedule(function()
+                if M.session == s and not vim.api.nvim_tabpage_is_valid(s.tab) then
+                    teardown(s)
                     wipe_buffers(s)
-                end)
-            end
+                end
+            end)
         end,
     })
     vim.api.nvim_create_autocmd("WinClosed", {
@@ -495,7 +496,12 @@ function M.open(opts)
     end
 
     local s = M.session
-    if s and vim.api.nvim_tabpage_is_valid(s.tab) then
+    if s and not vim.api.nvim_tabpage_is_valid(s.tab) then
+        -- Its tab was just closed (`:tabclose | NvimDiff`): TabClosed cleans up on the next tick, too
+        -- late for this open, whose panel buffer would clash with the old one's name.
+        teardown(s)
+        wipe_buffers(s)
+    elseif s then
         if s.root == repo.root or s.quit_on_close then
             vim.api.nvim_set_current_tabpage(s.tab)
             M.refresh()

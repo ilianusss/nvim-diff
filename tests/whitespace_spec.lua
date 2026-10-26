@@ -84,6 +84,8 @@ test("linematch alignment is the same with our 'diffexpr' as with the internal d
         return out
     end
     ok(vim.o.diffopt:find("linematch", 1, true), "default 'diffopt' has linematch")
+    -- Neovim 0.11.0 only applies the default linematch once 'diffopt' is set
+    vim.o.diffopt = vim.o.diffopt
     vim.o.diffexpr = ""
     local internal = fillers()
     vim.o.diffexpr = whitespace.EXPR
