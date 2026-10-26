@@ -42,9 +42,20 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: rhysd/action-setup-vim@febef33995d6649302e9d88dda81e071b68f16a7 # v1.6.1
-        with:
-          neovim: true
-          version: ${{ matrix.nvim }}
+      # The official release tarball. rhysd/action-setup-vim v1.6.1 fails on ubuntu-latest with
+      # EXDEV (rhysd/action-setup-vim#80).
+      - name: Install Neovim
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NVIM_VERSION: ${{ matrix.nvim }}
+        run: |
+          case "$RUNNER_OS-$RUNNER_ARCH" in
+            Linux-X64) asset=nvim-linux-x86_64 ;;
+            macOS-ARM64) asset=nvim-macos-arm64 ;;
+            *) echo "no Neovim build for $RUNNER_OS-$RUNNER_ARCH" >&2; exit 1 ;;
+          esac
+          gh release download "$NVIM_VERSION" -R neovim/neovim -p "$asset.tar.gz" -O - | tar xz -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/$asset/bin" >> "$GITHUB_PATH"
+      - run: nvim --version
       - run: make test
       - run: make smoke
