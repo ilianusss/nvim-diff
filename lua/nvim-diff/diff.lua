@@ -185,7 +185,7 @@ function M.show(s, entry)
     for _, e in ipairs(s.status.working) do
         unstaged[e.path] = true
     end
-    local sides = M.sides(entry, s.has_head, unstaged)
+    local sides = M.sides(entry, s.status.has_head, unstaged)
     local bufs = {}
     for i, side in ipairs(sides) do
         bufs[i] = M.side_buf(s, side)

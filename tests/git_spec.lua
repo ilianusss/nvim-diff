@@ -232,3 +232,11 @@ test("backup skips directories (an untracked nested repo) and hashes the files n
     eq(vim.tbl_keys(hashes), { "a.txt" })
     eq(repo:git("cat-file", "-p", hashes["a.txt"]), "2\n")
 end)
+
+test("status says whether HEAD exists", function()
+    local repo = H.repo()
+    repo:write("a.txt", "1\n")
+    eq(assert(git.status(repo.root)).has_head, false, "before the first commit")
+    repo:commit()
+    eq(assert(git.status(repo.root)).has_head, true, "after it")
+end)

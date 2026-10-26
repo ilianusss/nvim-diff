@@ -3,8 +3,8 @@
 ## Data flow
 
 ```
-git.status(root)                    porcelain v2 + numstat (3 git processes, run in parallel)
-  -> Status { conflicting, working, staged }   lists of Entry
+git.status(root)                    porcelain v2 --branch + numstat (3 git processes, run in parallel)
+  -> Status { has_head, conflicting, working, staged }   has_head from `# branch.oid (initial)`
   -> view.session.status
        -> panel.render(session)     tree.build() per section -> lines + extmarks + line->item map
        -> view.select(entry)        diff.sides(entry) -> buffers -> diff windows (diffthis)
@@ -56,7 +56,7 @@ A file that is both staged and modified appears twice, once in `staged` and once
   unstaged changes (same content, and editable); only with unstaged edits on top is it the
   read-only `:path` blob. The choice is made when the entry is selected, and the winbar says
   which one (`WORKING TREE` or `INDEX`).
-- No HEAD yet (fresh repo): the left side of staged entries is empty.
+- No HEAD yet (fresh repo, `status.has_head` false): the left side of staged entries is empty.
 - Binary files and submodules get a one-line placeholder on both sides.
 - A missing conflict stage (modify/delete conflicts) is an empty pane.
 
