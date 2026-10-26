@@ -12,6 +12,11 @@ watch (fs events / poll / autocmds) -> debounce -> view.refresh() -> git.status(
 actions.lua (keymaps, clicks)       -> git.stage/unstage/restore -> view.refresh()
 ```
 
+Discarding (`X`) backs up the regular files with one `git hash-object -w` and stops if that fails.
+It then runs one git call per kind of entry (tracked, staged, untracked), so a path git rejects
+(gone since the last status) leaves the other entries of its kind untouched. The message lists
+the backups and, for staged entries, their index blob.
+
 `view.refresh()` re-renders only when the new `Status` differs from the old one. It keeps the
 panel cursor on the same item, reloads scratch sides whose blob hash changed, runs `:checktime`
 on the real file buffer, then `:diffupdate`.

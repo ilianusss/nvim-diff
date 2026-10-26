@@ -170,6 +170,21 @@ function M.stub_confirm(answer)
     end
 end
 
+---vim.notify records the messages of `level` in `messages` until the test ends.
+---@param messages string[]
+---@param level integer
+function M.stub_notify(messages, level)
+    local orig = vim.notify
+    vim.notify = function(msg, lvl)
+        if lvl == level then
+            messages[#messages + 1] = msg
+        end
+    end
+    restores[#restores + 1] = function()
+        vim.notify = orig
+    end
+end
+
 ---Back to a single empty window between tests.
 function M.reset()
     local view = require("nvim-diff.view")

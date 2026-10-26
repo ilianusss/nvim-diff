@@ -116,7 +116,9 @@ File panel ~
                         (untracked files are deleted). In Staged changes:
                         back to HEAD, index and working tree. The discarded
                         content is saved first: the message shows a
-                        `git cat-file -p <hash>` command to get it back.
+                        `git cat-file -p <hash>` command to get it back
+                        (for a staged file, its staged version too).
+                        If the backup fails, nothing is discarded.
   i                     Toggle tree / list
   f                     Toggle flattening single-child folders
   za  zo  zc  h  zR  zM Folds (`h` on a file folds its folder)
