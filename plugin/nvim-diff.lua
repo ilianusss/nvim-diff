@@ -6,6 +6,22 @@ if vim.g.loaded_nvim_diff then
 end
 vim.g.loaded_nvim_diff = true
 
+local function is_diff_argv()
+    return vim.fn.argc(-1) == 1 and vim.fn.argv(0, -1) == "diff" and vim.fn.getftype("diff") == ""
+end
+
+-- On an older Neovim the modules fail with Lua errors on missing APIs: say what is needed instead.
+if vim.fn.has("nvim-0.11") == 0 then
+    local function too_old()
+        vim.notify("nvim-diff needs Neovim 0.11 or newer", vim.log.levels.ERROR)
+    end
+    vim.api.nvim_create_user_command("NvimDiff", too_old, { nargs = "?", desc = "nvim-diff needs Neovim 0.11+" })
+    if is_diff_argv() then
+        vim.api.nvim_create_autocmd("VimEnter", { once = true, callback = too_old })
+    end
+    return
+end
+
 vim.api.nvim_create_user_command("NvimDiff", function(o)
     require("nvim-diff").open({ path = o.args ~= "" and vim.fn.expand(o.args) or nil })
 end, { nargs = "?", complete = "dir", desc = "Review the changes of the repo (nvim-diff)" })
@@ -18,7 +34,6 @@ vim.api.nvim_create_user_command("NvimDiffRefresh", function()
     require("nvim-diff").refresh()
 end, { desc = "Refresh the nvim-diff view" })
 
--- `nvim diff`: the only argument is "diff" and no file of that name exists
 local function open_from_argv()
     local diff_buf = vim.api.nvim_get_current_buf()
     local session = require("nvim-diff").open({ current_tab = true, quit_on_close = true })
@@ -30,7 +45,7 @@ local function open_from_argv()
     end
 end
 
-if vim.fn.argc(-1) == 1 and vim.fn.argv(0, -1) == "diff" and not vim.uv.fs_stat("diff") then
+if is_diff_argv() then
     if vim.v.vim_did_enter == 1 then
         open_from_argv()
     else
