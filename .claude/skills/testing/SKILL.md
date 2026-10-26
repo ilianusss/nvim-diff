@@ -34,8 +34,9 @@ end)
 ```
 
 - `H.repo(files?)`: new temp repo (user/email set, gpg signing off). With `files` it commits them.
-  Methods: `repo:write(path, text)`, `repo:git(args...)` (asserts success, returns stdout),
-  `repo:commit(msg)`, `repo:conflict(path)` (creates a real merge conflict on `path`).
+  Methods: `repo:write(path, text)`, `repo:read(path)`, `repo:exists(path)`,
+  `repo:git(args...)` (asserts success, returns stdout), `repo:try_git(args...)` (stdout, exit
+  code, no assert), `repo:commit(msg)`, `repo:conflict(path, { diff3? })` (a real merge conflict).
 - `H.open(repo)`: opens the view on that repo and returns the session.
 - `H.wait(cond, ms)`: `vim.wait` with a failure message; use it for anything async (refresh after
   an fs event, `git.status` with a callback).
@@ -55,5 +56,7 @@ end)
   makes tests flaky.
 - Never leave a process running: a spec that opens windows must not prompt. Stub `vim.fn.confirm`
   in tests that trigger confirmations: `H.stub_confirm(1)` (1 = first button).
+- Run the suite on the oldest supported Neovim too: `make test NVIM=/path/to/nvim-0.11.0` (CI
+  does it on every pull request).
 - A hanging test usually means a missing `H.wait` or a prompt; run `make test FILTER=<file>`
   and add prints, which `nvim -l` writes to stdout.
