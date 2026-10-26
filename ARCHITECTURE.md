@@ -57,6 +57,8 @@ A file that is both staged and modified appears twice, once in `staged` and once
 
 Scratch sides are `nvim-diff://<label>/<path>` buffers (`buftype=nofile`, not modifiable,
 filetype from the path). The real file side is `bufadd(path)`, so edits, `:w` and LSP work.
+When the file is open in another Neovim, `bufload()` loads it but raises E325 (swap file): the
+view shows it anyway and passes the message on as a warning.
 
 ## Whitespace ("ignore leading/trailing whitespace")
 

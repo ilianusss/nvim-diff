@@ -56,6 +56,8 @@ end)
   makes tests flaky.
 - Never leave a process running: a spec that opens windows must not prompt. Stub `vim.fn.confirm`
   in tests that trigger confirmations: `H.stub_confirm(1)` (1 = first button).
+- What only happens in a real startup (VimEnter, swap files: `bufload()` raises E325 there but
+  not under `nvim -l`) goes in `tests/smoke.sh`, which uses its own swap directory.
 - Run the suite on the oldest supported Neovim too: `make test NVIM=/path/to/nvim-0.11.0` (CI
   does it on every pull request).
 - A hanging test usually means a missing `H.wait` or a prompt; run `make test FILTER=<file>`
