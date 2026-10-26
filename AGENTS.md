@@ -54,7 +54,7 @@ tests/                  headless specs (tests/run.lua runner, tests/helpers.lua 
 - Scratch buffers are named `nvim-diff://<label>/<path>`, `buftype=nofile`, not modifiable.
   The working-tree side is always the real file buffer, so editing and LSP work there.
 - Destructive actions (restore/discard) ask for confirmation and back up the file content with
-  `git hash-object -w` first.
+  `git hash-object -w` first. If the backup fails, they discard nothing.
 - No plugin dependencies. Optional integrations (nvim-web-devicons, mini.icons) go through `pcall`.
 
 ## License rule

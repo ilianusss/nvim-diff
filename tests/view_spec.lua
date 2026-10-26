@@ -359,3 +359,39 @@ test(":tabclose | NvimDiff reopens the view at once and stops the old watcher", 
     eq(vim.api.nvim_buf_get_name(s.panel_buf), "nvim-diff://panel")
     ok(stopped, "the old session's watcher is stopped")
 end)
+
+test("restore discards nothing when the backup fails", function()
+    local repo = H.repo({ ["a.txt"] = "1\n" })
+    repo:write("a.txt", "2\n")
+    local s = H.open(repo)
+    vim.uv.fs_chmod(repo.root .. "/a.txt", 0) -- git cannot read it, so cannot back it up
+    local errors = {}
+    H.stub_notify(errors, vim.log.levels.ERROR)
+    H.stub_confirm(1)
+    H.panel_cursor(s, "a%.txt")
+    H.run("restore")
+    vim.uv.fs_chmod(repo.root .. "/a.txt", tonumber("644", 8))
+    eq(repo:read("a.txt"), "2\n")
+    ok(errors[1] and errors[1]:find("backup failed, nothing discarded", 1, true), vim.inspect(errors))
+end)
+
+test("discarding a staged file with unstaged edits on top lists its staged version for recovery", function()
+    local repo = H.repo({ ["a.txt"] = "1\n" })
+    repo:write("a.txt", "staged\n")
+    repo:git("add", "a.txt")
+    repo:write("a.txt", "unstaged\n")
+    local s = H.open(repo)
+    local infos = {}
+    H.stub_notify(infos, vim.log.levels.INFO)
+    H.stub_confirm(1)
+    H.panel_cursor(s, "^Staged changes")
+    H.run("restore")
+    eq(repo:read("a.txt"), "1\n")
+    local message = table.concat(infos, "\n")
+    local hashes = {}
+    for hash in message:gmatch("git cat%-file %-p (%x+)") do
+        hashes[#hashes + 1] = vim.trim(repo:git("cat-file", "-p", hash))
+    end
+    table.sort(hashes)
+    eq(hashes, { "staged", "unstaged" }, message)
+end)

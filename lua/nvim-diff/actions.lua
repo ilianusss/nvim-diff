@@ -357,23 +357,32 @@ A.restore = {
             return
         end
 
+        local hashes, backup_err = git.backup(s.root, paths(entries))
+        if not hashes then
+            notify("backup failed, nothing discarded: " .. (backup_err or "git failed"), ERROR)
+            return
+        end
+        local ok, err = git.restore(s.root, entries)
+        if not ok then
+            notify(err or "git failed", ERROR)
+        end
+
         local backups, gone = {}, {}
         for _, e in ipairs(entries) do
-            local hash = git.backup(s.root, e.path)
-            local ok, err = git.restore(s.root, e)
-            if not ok then
-                notify(("%s: %s"):format(e.path, err or "failed"), ERROR)
-            else
-                if hash then
-                    backups[#backups + 1] = ("  %s: git cat-file -p %s"):format(e.path, hash:sub(1, 12))
-                end
-                local buf = file_buf(s, e.path)
-                if buf and vim.api.nvim_buf_is_loaded(buf) then
-                    if vim.uv.fs_stat(s.root .. "/" .. e.path) then
-                        vim.cmd("checktime " .. buf)
-                    else
-                        gone[#gone + 1] = buf
-                    end
+            if hashes[e.path] then
+                backups[#backups + 1] = ("  %s: git cat-file -p %s"):format(e.path, hashes[e.path]:sub(1, 12))
+            end
+            -- Discarding a staged entry also drops its index version, already a blob in the repo
+            local staged_blob = e.kind == "staged" and e.hashes.index
+            if staged_blob and not staged_blob:match("^0+$") and staged_blob ~= hashes[e.path] then
+                backups[#backups + 1] = ("  %s (staged): git cat-file -p %s"):format(e.path, staged_blob:sub(1, 12))
+            end
+            local buf = file_buf(s, e.path)
+            if buf and vim.api.nvim_buf_is_loaded(buf) then
+                if vim.uv.fs_stat(s.root .. "/" .. e.path) then
+                    vim.cmd("checktime " .. buf)
+                else
+                    gone[#gone + 1] = buf
                 end
             end
         end
@@ -385,7 +394,7 @@ A.restore = {
             end
         end
         if #backups > 0 then
-            notify("discarded. To recover:\n" .. table.concat(backups, "\n"))
+            notify("Content before the discard, to get it back:\n" .. table.concat(backups, "\n"))
         end
     end,
 }
