@@ -395,3 +395,12 @@ test("discarding a staged file with unstaged edits on top lists its staged versi
     table.sort(hashes)
     eq(hashes, { "staged", "unstaged" }, message)
 end)
+
+test("help shows a key mapped to an action's old name on the same row", function()
+    require("nvim-diff").setup({ keymaps = { panel = { ["<C-l>"] = "listing_style" } } })
+    local rows = vim.tbl_filter(function(l)
+        return l:find("Toggle tree / list", 1, true) ~= nil
+    end, require("nvim-diff.help").lines({ "panel" }))
+    eq(#rows, 1, vim.inspect(rows))
+    ok(rows[1]:find("<C-l>, i", 1, true), rows[1])
+end)

@@ -232,13 +232,15 @@ a key for an existing action: >lua
     }
 <
 Action names: select, click, toggle_stage, stage_all, unstage_all, restore,
-refresh, listing_style, toggle_flatten_dirs, toggle_fold, open_fold,
+refresh, toggle_listing_style, toggle_flatten_dirs, toggle_fold, open_fold,
 close_fold, open_all_folds, close_all_folds, next_file, prev_file,
 first_file, last_file, toggle_whitespace, toggle_full_file, goto_file,
 focus_panel, toggle_panel, help, close, next_conflict, prev_conflict,
 choose_ours, choose_theirs, choose_base, choose_all, choose_none,
 choose_all_ours, choose_all_theirs, choose_all_base, choose_all_all,
 choose_all_none, diffget_ours, diffget_theirs.
+
+`listing_style`, the old name of `toggle_listing_style`, still works.
 
 ==============================================================================
 9. HIGHLIGHTS                                           *nvim-diff-highlights*
