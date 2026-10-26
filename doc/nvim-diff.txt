@@ -13,6 +13,7 @@ CONTENTS                                                  *nvim-diff-contents*
   8. Configuration ........................... |nvim-diff-config|
   9. Highlights .............................. |nvim-diff-highlights|
  10. Lua API ................................. |nvim-diff-api|
+ 11. Health .................................. |nvim-diff-health|
 
 ==============================================================================
 1. INTRODUCTION                                  *nvim-diff* *nvim-diff-intro*
@@ -22,8 +23,9 @@ nvim-diff shows the changed files of a git repo in a panel on the left
 It is made for reviewing what a coding agent wrote: the view refreshes by
 itself while files change.
 
-Requirements: Neovim 0.11+, git. Optional: nvim-web-devicons or mini.icons
-for file icons.
+Requirements: Neovim 0.11+, git 2.23+. Optional: nvim-web-devicons or
+mini.icons for file icons. |:checkhealth| `nvim-diff` checks them
+(|nvim-diff-health|).
 
 ==============================================================================
 2. USAGE                                                     *nvim-diff-usage*
@@ -130,7 +132,9 @@ File panel ~
                         (untracked files are deleted). In Staged changes:
                         back to HEAD, index and working tree. The discarded
                         content is saved first: the message shows a
-                        `git cat-file -p <hash>` command to get it back.
+                        `git cat-file -p <hash>` command to get it back
+                        (for a staged file, its staged version too).
+                        If the backup fails, nothing is discarded.
   i                     Toggle tree / list
   f                     Toggle flattening single-child folders
   za  zo  zc  h  zR  zM Folds (`h` on a file folds its folder)
@@ -242,13 +246,15 @@ a key for an existing action: >lua
     }
 <
 Action names: select, click, toggle_stage, stage_all, unstage_all, restore,
-refresh, listing_style, toggle_flatten_dirs, toggle_fold, open_fold,
+refresh, toggle_listing_style, toggle_flatten_dirs, toggle_fold, open_fold,
 close_fold, open_all_folds, close_all_folds, next_file, prev_file,
 first_file, last_file, toggle_whitespace, toggle_full_file, goto_file,
 focus_panel, toggle_panel, help, close, next_conflict, prev_conflict,
 choose_ours, choose_theirs, choose_base, choose_all, choose_none,
 choose_all_ours, choose_all_theirs, choose_all_base, choose_all_all,
 choose_all_none, diffget_ours, diffget_theirs.
+
+`listing_style`, the old name of `toggle_listing_style`, still works.
 
 ==============================================================================
 9. HIGHLIGHTS                                           *nvim-diff-highlights*
@@ -286,5 +292,17 @@ All groups are defined with `default`, so a colorscheme can override them.
   require("nvim-diff").close()
   require("nvim-diff").refresh()
   require("nvim-diff").is_open()
+
+==============================================================================
+11. HEALTH                                                  *nvim-diff-health*
+
+`:checkhealth nvim-diff` checks:
+- the Neovim version (0.11+) and the git on $PATH (2.23+, for `git restore`),
+- that every action name in your `keymaps` exists (|nvim-diff-config|),
+- and reports where file icons come from and how live refresh works on this
+  system (|nvim-diff-live-refresh|).
+
+On an older Neovim, |:NvimDiff| and `nvim diff` only show an error saying
+which version is needed.
 
  vim:tw=78:ts=8:ft=help:norl:

@@ -3,14 +3,19 @@
 ## Data flow
 
 ```
-git.status(root)                    porcelain v2 + numstat (3 git processes, run in parallel)
-  -> Status { conflicting, working, staged }   lists of Entry
+git.status(root)                    porcelain v2 --branch + numstat (3 git processes, run in parallel)
+  -> Status { has_head, conflicting, working, staged }   has_head from `# branch.oid (initial)`
   -> view.session.status
        -> panel.render(session)     tree.build() per section -> lines + extmarks + line->item map
        -> view.select(entry)        diff.sides(entry) -> buffers -> diff windows (diffthis)
 watch (fs events / poll / autocmds) -> debounce -> view.refresh() -> git.status() -> same path
 actions.lua (keymaps, clicks)       -> git.stage/unstage/restore -> view.refresh()
 ```
+
+Discarding (`X`) backs up the regular files with one `git hash-object -w` and stops if that fails.
+It then runs one git call per kind of entry (tracked, staged, untracked), so a path git rejects
+(gone since the last status) leaves the other entries of its kind untouched. The message lists
+the backups and, for staged entries, their index blob.
 
 `view.refresh()` re-renders only when the new `Status` differs from the old one. It keeps the
 panel cursor on the same item, reloads scratch sides whose blob hash changed (a git side that
@@ -52,12 +57,14 @@ A file that is both staged and modified appears twice, once in `staged` and once
   unstaged changes (same content, and editable); only with unstaged edits on top is it the
   read-only `:path` blob. The choice is made when the entry is selected, and the winbar says
   which one (`WORKING TREE` or `INDEX`).
-- No HEAD yet (fresh repo): the left side of staged entries is empty.
+- No HEAD yet (fresh repo, `status.has_head` false): the left side of staged entries is empty.
 - Binary files and submodules get a one-line placeholder on both sides.
 - A missing conflict stage (modify/delete conflicts) is an empty pane.
 
 Scratch sides are `nvim-diff://<label>/<path>` buffers (`buftype=nofile`, not modifiable,
 filetype from the path). The real file side is `bufadd(path)`, so edits, `:w` and LSP work.
+When the file is open in another Neovim, `bufload()` loads it but raises E325 (swap file): the
+view shows it anyway and passes the message on as a warning.
 
 ## Whitespace ("ignore leading/trailing whitespace")
 
@@ -158,3 +165,7 @@ Staging asks first while conflict markers remain.
 `plugin/nvim-diff.lua` checks at startup whether the only argument is `diff` and no file named
 `diff` exists. On `VimEnter` it wipes the `diff` buffer and opens the view in the current tab
 with `quit_on_close = true`: closing the view runs `confirm qa`.
+
+On a Neovim older than 0.11, the plugin file only defines `:NvimDiff` (and the `nvim diff` hook)
+to print which version is needed: the modules use 0.11 APIs and would fail with Lua errors.
+`:checkhealth nvim-diff` (`health.lua`) checks the Neovim and git versions and the keymaps.

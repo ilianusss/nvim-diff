@@ -14,7 +14,6 @@ local M = {}
 ---@class NvimDiffSession
 ---@field root string
 ---@field gitdir string
----@field has_head boolean
 ---@field tab integer
 ---@field prev_tab? integer tabpage `gf` opens files in
 ---@field panel_buf integer
@@ -44,7 +43,7 @@ local M = {}
 ---@type NvimDiffSession?
 M.session = nil
 
-local EMPTY_STATUS = { conflicting = {}, working = {}, staged = {} }
+local EMPTY_STATUS = { has_head = false, conflicting = {}, working = {}, staged = {} }
 
 --------------------------------------------------------------------------------
 -- Buffer-local keymaps
@@ -241,7 +240,6 @@ local function apply_status(s, st)
         end
     end
     s.status = st
-    s.has_head = git.has_head(s.root)
     local cur = s.current
     if not cur then
         local first = first_entry(st)
@@ -521,7 +519,6 @@ function M.open(opts)
     s = {
         root = repo.root,
         gitdir = repo.gitdir,
-        has_head = git.has_head(repo.root),
         tab = vim.api.nvim_get_current_tabpage(),
         prev_tab = not opts.current_tab and prev_tab or nil,
         panel_buf = panel.create_buf(),

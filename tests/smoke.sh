@@ -13,7 +13,7 @@ export OUT
 FAILED=0
 
 REPO="$TMP/repo"
-mkdir -p "$REPO/sub" "$TMP/norepo"
+mkdir -p "$REPO/sub" "$TMP/norepo" "$TMP/swap"
 git -C "$REPO" init -q -b main
 git -C "$REPO" config user.email t@t
 git -C "$REPO" config user.name t
@@ -41,7 +41,7 @@ start() { # dir, extra args...
     dir=$1
     shift
     rm -f "$OUT"
-    (cd "$dir" && "$NVIM" --clean --headless --cmd "set rtp^=$ROOT" "$@" >/dev/null 2>&1) || true
+    (cd "$dir" && "$NVIM" --clean --headless --cmd "set rtp^=$ROOT" --cmd "set directory=$TMP/swap//" "$@" >/dev/null 2>&1) || true
 }
 
 expect() { # scenario, key=value...
@@ -61,6 +61,25 @@ expect() { # scenario, key=value...
 start "$REPO/sub" diff "+$REPORT"
 expect "nvim diff in a repo subfolder opens the view" \
     open=true quit_on_close=true wins=3 tabs=1 current=a.txt diff_buf=0
+
+# A changed file open in another Neovim has a swap file: loading it must not break the layout
+"$NVIM" --clean --headless --cmd "set directory=$TMP/swap//" "$REPO/a.txt" >/dev/null 2>&1 &
+OTHER=$!
+i=0
+while [ -z "$(ls "$TMP/swap")" ] && [ $i -lt 50 ]; do
+    sleep 0.1
+    i=$((i + 1))
+done
+if [ -z "$(ls "$TMP/swap")" ]; then
+    echo "FAIL  nvim diff with a changed file open in another Neovim: the other Neovim wrote no swap file"
+    FAILED=1
+else
+    start "$REPO/sub" diff "+$REPORT"
+    expect "nvim diff with a changed file open in another Neovim" open=true wins=3 current=a.txt
+fi
+kill "$OTHER" 2>/dev/null || true
+wait "$OTHER" 2>/dev/null || true
+rm -f "$TMP"/swap/*
 
 start "$TMP/norepo" diff "+$REPORT"
 expect "nvim diff outside a repo: normal empty editor" open=false diff_buf=0 bufname=

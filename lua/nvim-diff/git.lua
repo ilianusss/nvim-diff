@@ -17,6 +17,7 @@ local M = {}
 ---@field conflicts? integer conflict regions left in the working file
 
 ---@class NvimDiffStatus
+---@field has_head boolean false before the first commit
 ---@field conflicting NvimDiffEntry[]
 ---@field working NvimDiffEntry[]
 ---@field staged NvimDiffEntry[]
@@ -65,6 +66,25 @@ function M.has_head(root)
     return M.run(root, { "rev-parse", "--verify", "-q", "HEAD" }) ~= nil
 end
 
+---Version of the git on $PATH, e.g. "2.45.1" (build suffixes such as ".windows.1" dropped).
+---@return string? version
+---@return string? err
+function M.version()
+    local ok, proc = pcall(vim.system, { "git", "--version" }, { text = true })
+    if not ok then
+        return nil, "git not found: " .. tostring(proc)
+    end
+    local out, err = result(proc:wait())
+    if not out then
+        return nil, "`git --version` failed: " .. err
+    end
+    local version = out:match("^git version (%d+%.%d+%.?%d*)")
+    if not version then
+        return nil, "unexpected `git --version` output: " .. vim.trim(out)
+    end
+    return version
+end
+
 --------------------------------------------------------------------------------
 -- Status
 --------------------------------------------------------------------------------
@@ -81,18 +101,20 @@ local function add_entry(list, kind, status, xy, path, old_path, hashes, sub)
     }
 end
 
----Parses `git status --porcelain=v2 -z --untracked-files=all`.
+---Parses `git status --porcelain=v2 --branch -z --untracked-files=all`.
 ---@param out string
 ---@return NvimDiffStatus
 function M.parse_status(out)
-    local st = { conflicting = {}, working = {}, staged = {} }
+    local st = { has_head = true, conflicting = {}, working = {}, staged = {} }
     local tokens = vim.split(out, "\0", { plain = true })
     local i = 1
     while i <= #tokens do
         local t = tokens[i]
         local kind = t:sub(1, 1)
         local xy, sub, h1, h2, h3, path, old_path
-        if kind == "1" then
+        if t == "# branch.oid (initial)" then
+            st.has_head = false
+        elseif kind == "1" then
             xy, sub, h1, h2, path = t:match("^1 (..) (%S+) %S+ %S+ %S+ (%S+) (%S+) (.*)$")
         elseif kind == "2" then
             xy, sub, h1, h2, path = t:match("^2 (..) (%S+) %S+ %S+ %S+ (%S+) (%S+) %S+ (.*)$")
@@ -164,7 +186,7 @@ function M.count_conflicts(file)
 end
 
 local STATUS_JOBS = {
-    status = { "status", "--porcelain=v2", "-z", "--untracked-files=all" },
+    status = { "status", "--porcelain=v2", "--branch", "--no-ahead-behind", "-z", "--untracked-files=all" },
     working = { "diff", "--numstat", "-z" },
     staged = { "diff", "--cached", "--numstat", "-z" },
 }
@@ -365,49 +387,80 @@ function M.unstage_all(root)
     return M.run(root, { "rm", "--cached", "-r", "-q", "--", "." })
 end
 
----Writes the working-tree content of `path` to the object database, so a discarded change can
----be recovered with `git cat-file -p <hash>`.
+---Writes the working-tree content of `paths` to the object database, so discarded changes can be
+---recovered with `git cat-file -p <hash>`. Only regular files are backed up: hash-object fails on a
+---directory (a nested repo, a submodule) and on a missing path.
 ---@param root string
----@param path string
----@return string? hash
-function M.backup(root, path)
-    if not vim.uv.fs_stat(root .. "/" .. path) then
-        return nil
+---@param paths string[]
+---@return table<string, string>? hashes path -> blob hash
+---@return string? err
+function M.backup(root, paths)
+    local existing = vim.tbl_filter(function(path)
+        local stat = vim.uv.fs_stat(root .. "/" .. path)
+        return stat ~= nil and stat.type == "file"
+    end, paths)
+    if #existing == 0 then
+        return {}
     end
-    local out = M.run(root, { "hash-object", "-w", "--", path })
-    return out and vim.trim(out)
+    local out, err = M.run(root, with_paths({ "hash-object", "-w" }, existing))
+    if not out then
+        return nil, err
+    end
+    local hashes = {}
+    for i, hash in ipairs(vim.split(vim.trim(out), "\n", { plain = true })) do
+        hashes[existing[i]] = hash
+    end
+    return hashes
 end
 
----Discards an entry: back to the left side of its diff.
----working: the index version (an untracked file is deleted).
+---Discards entries: each goes back to the left side of its diff. One git call per kind of entry, so a
+---path git rejects (gone since the last status) leaves the other entries of its kind untouched.
+---working: the index version (untracked files are deleted).
 ---staged: the HEAD version, in the index and the working tree.
 ---@param root string
----@param entry NvimDiffEntry
+---@param entries NvimDiffEntry[]
 ---@return boolean? ok
 ---@return string? err
-function M.restore(root, entry)
-    if entry.kind == "working" then
-        if entry.status == "?" then
-            return os.remove(root .. "/" .. entry.path)
-        end
-        local ok, err = M.run(root, { "restore", "--", entry.path })
-        return ok ~= nil, err
-    elseif entry.kind == "staged" then
-        local ok, err
-        if M.has_head(root) then
-            ok, err = M.run(
-                root,
-                with_paths({ "restore", "--source=HEAD", "--staged", "--worktree" }, {
-                    entry.path,
-                    entry.old_path,
-                })
-            )
+function M.restore(root, entries)
+    local tracked, untracked, staged = {}, {}, {}
+    for _, e in ipairs(entries) do
+        if e.kind == "conflicting" then
+            return nil, "conflicts are resolved with the conflict actions, not restored"
+        elseif e.kind == "staged" then
+            staged[#staged + 1] = e.path
+            staged[#staged + 1] = e.old_path
+        elseif e.status == "?" then
+            untracked[#untracked + 1] = e.path
         else
-            ok, err = M.run(root, { "rm", "-f", "-q", "--", entry.path })
+            tracked[#tracked + 1] = e.path
         end
-        return ok ~= nil, err
     end
-    return nil, "conflicts are resolved with the conflict actions, not restored"
+
+    local errors = {}
+    local function run(args, paths)
+        if #paths > 0 then
+            local out, err = M.run(root, with_paths(args, paths))
+            if not out then
+                errors[#errors + 1] = err
+            end
+        end
+    end
+    run({ "restore" }, tracked)
+    if #staged > 0 then
+        local args = M.has_head(root) and { "restore", "--source=HEAD", "--staged", "--worktree" }
+            or { "rm", "-f", "-q" }
+        run(args, staged)
+    end
+    for _, path in ipairs(untracked) do
+        local removed, err = os.remove(root .. "/" .. path)
+        if not removed then
+            errors[#errors + 1] = err
+        end
+    end
+    if #errors > 0 then
+        return nil, table.concat(errors, "\n")
+    end
+    return true
 end
 
 return M

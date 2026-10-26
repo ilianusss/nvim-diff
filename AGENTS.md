@@ -6,7 +6,7 @@ panel, a VS Code-style "ignore leading/trailing whitespace" toggle, live refresh
 writes files, and a 3-way conflict tool. `nvim diff` in a repo opens it.
 
 The look and keymaps follow diffview.nvim; some ideas (whitespace trimming, live refresh) come
-from codediff.nvim. Neovim 0.11+ and git, no plugin dependencies. Keep it light: features beyond
+from codediff.nvim. Neovim 0.11+ and git 2.23+, no plugin dependencies. Keep it light: features beyond
 the list in README.md need a reason.
 
 - `README.md`: user-facing summary (install, keys, options). Keep in sync with `doc/nvim-diff.txt`.
@@ -33,6 +33,7 @@ lua/nvim-diff/
   conflict.lua          conflict-marker parser and the choose ours/theirs/base/all/none edits
   hl.lua                NvimDiff* highlight groups (default = true, relinked on ColorScheme)
   help.lua              g? floating help built from actions.lua descs
+  health.lua            :checkhealth nvim-diff (Neovim and git versions, keymaps, icons, refresh mode)
 doc/nvim-diff.txt       vimdoc
 tests/                  headless specs (tests/run.lua runner, tests/helpers.lua temp repos)
 .github/                CI (lint + tests on Linux and macOS, Neovim v0.11.0 and stable), templates, CODEOWNERS
@@ -55,7 +56,7 @@ tests/                  headless specs (tests/run.lua runner, tests/helpers.lua 
 - Scratch buffers are named `nvim-diff://<label>/<path>`, `buftype=nofile`, not modifiable.
   The working-tree side is always the real file buffer, so editing and LSP work there.
 - Destructive actions (restore/discard) ask for confirmation and back up the file content with
-  `git hash-object -w` first.
+  `git hash-object -w` first. If the backup fails, they discard nothing.
 - No plugin dependencies. Optional integrations (nvim-web-devicons, mini.icons) go through `pcall`.
 
 ## License rule

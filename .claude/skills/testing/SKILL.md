@@ -55,7 +55,12 @@ end)
   `require("nvim-diff.actions").run(name, ctx)`: feedkeys needs the typeahead to be processed and
   makes tests flaky.
 - Never leave a process running: a spec that opens windows must not prompt. Stub `vim.fn.confirm`
-  in tests that trigger confirmations: `H.stub_confirm(1)` (1 = first button).
+  in tests that trigger confirmations: `H.stub_confirm(1)` (1 = first button). To assert on
+  messages, `H.stub_notify(list, vim.log.levels.WARN)` collects them. Both are undone between tests.
+- `:checkhealth` runs in a child Neovim (`tests/health_spec.lua`): in-process, a second
+  `:checkhealth` after a failed test crashed `nvim -l` 0.12.5.
+- What only happens in a real startup (VimEnter, swap files: `bufload()` raises E325 there but
+  not under `nvim -l`) goes in `tests/smoke.sh`, which uses its own swap directory.
 - Run the suite on the oldest supported Neovim too: `make test NVIM=/path/to/nvim-0.11.0` (CI
   does it on every pull request).
 - A hanging test usually means a missing `H.wait` or a prompt; run `make test FILTER=<file>`

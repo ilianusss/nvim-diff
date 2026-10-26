@@ -157,7 +157,16 @@ function M.side_buf(s, side)
         -- list; `gf` (:edit) lists them.
         local buf = vim.fn.bufadd(abs)
         if not vim.api.nvim_buf_is_loaded(buf) then
-            vim.fn.bufload(buf)
+            -- bufload() loads the buffer, then raises E325 when a swap file exists (the file is open
+            -- in another Neovim) or E303 when none can be created: the file is there, warn only.
+            local ok, err = pcall(vim.fn.bufload, buf)
+            if not ok then
+                local swap_error = err:match("E325:") or err:match("E303:")
+                if not (swap_error and vim.api.nvim_buf_is_loaded(buf)) then
+                    error(err, 0)
+                end
+                vim.notify(("nvim-diff: %s: %s"):format(side.path, err), vim.log.levels.WARN)
+            end
             s.loaded[buf] = true
         end
         return buf
@@ -209,7 +218,7 @@ function M.show(s, entry)
     for _, e in ipairs(s.status.working) do
         unstaged[e.path] = true
     end
-    local sides = M.sides(entry, s.has_head, unstaged)
+    local sides = M.sides(entry, s.status.has_head, unstaged)
     if #sides == 2 and sides[1].type == "rev" and sides[2].type == "file" then
         local driver, err = git.filter_driver(s.root, sides[2].path)
         if err then

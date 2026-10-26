@@ -285,7 +285,7 @@ end
 
 local CLICK = {
     [1] = "toggle_whitespace",
-    [2] = "listing_style",
+    [2] = "toggle_listing_style",
     [3] = "refresh",
     [4] = "toggle_full_file",
 }
