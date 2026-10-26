@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # A new push to a pull request replaces its running checks; every commit on main keeps its run
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: JohnnyMorganz/stylua-action@76fd70c03e6340ceaf673366712db9b20560b402 # v5.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: 2.6.0 # keep the local stylua (Mason or PATH) on this version
+          args: --check lua plugin tests
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        # Linux polls for live refresh, macOS uses recursive file events
+        os: [ubuntu-latest, macos-latest]
+        # The oldest supported Neovim and the latest release
+        nvim: [v0.11.0, stable]
+    runs-on: ${{ matrix.os }}
+    # A headless Neovim that hits a prompt never exits
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: rhysd/action-setup-vim@febef33995d6649302e9d88dda81e071b68f16a7 # v1.6.1
+        with:
+          neovim: true
+          version: ${{ matrix.nvim }}
+      - run: make test
+      - run: make smoke

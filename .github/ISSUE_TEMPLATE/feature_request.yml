@@ -1,0 +1,20 @@
+name: Feature request
+description: Something nvim-diff should do
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: nvim-diff stays light on purpose, so a new feature needs a use case it cannot cover today.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you are trying to do, and what gets in the way
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like to happen
+      description: How VS Code, diffview.nvim or another tool does it helps.
+    validations:
+      required: true
